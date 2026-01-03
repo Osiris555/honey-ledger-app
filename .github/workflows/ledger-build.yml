@@ -33,3 +33,4 @@ jobs:
     make clean
     make TARGET=nanos2
 
+
