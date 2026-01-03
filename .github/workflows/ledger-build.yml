@@ -1,32 +1,36 @@
-name: Ledger Nano S Build
+name: Ledger Nano App Build
 
 on:
   push:
     branches: [ main ]
-  pull_request:
-
-permissions:
-  contents: read
-  packages: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Login to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            clang \
+            gcc-arm-none-eabi \
+            libnewlib-arm-none-eabi \
+            cmake \
+            make \
+            git \
+            python3 \
+            python3-pip
 
-      - name: Build Ledger app
-        uses: docker://ghcr.io/ledgerhq/ledger-app-builder:latest
-        with:
-          args: |
-            make clean
-            make
+      - name: Clone Ledger Nano SDK
+        run: |
+          git clone https://github.com/LedgerHQ/nanos-secure-sdk.git
+          echo "SDK_PATH=$(pwd)/nanos-secure-sdk" >> $GITHUB_ENV
+
+      - name: Build Honey Ledger App
+        run: |
+          export BOLOS_SDK=$SDK_PATH
+          make
