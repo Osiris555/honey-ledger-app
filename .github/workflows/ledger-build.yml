@@ -2,33 +2,26 @@ name: Honey Ledger App Build
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   pull_request:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: read
-      packages: read
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Login to GitHub Container Registry
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-
       - name: Pull Ledger App Builder image
         run: |
-          docker pull ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:1.16.0
+          docker pull ledgerhq/ledger-app-builder:1.16.0
 
       - name: Build Honey Ledger App (Nano S Plus)
         run: |
           docker run --rm \
             -v "$PWD:/app" \
             -w /app \
-            ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:1.16.0 \
+            ledgerhq/ledger-app-builder:1.16.0 \
             make
