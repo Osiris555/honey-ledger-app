@@ -26,5 +26,5 @@ jobs:
           docker run --rm \
             -v ${{ github.workspace }}:/app \
             -w /app \
-            ghcr.io/ledgerhq/ledger-app-builder:stable \
+            ghcr.io/ledgerhq/ledger-app-builder:1.16.0 \
             make
