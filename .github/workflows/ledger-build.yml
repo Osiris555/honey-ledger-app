@@ -9,30 +9,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Install dependencies
         run: |
-          sudo apt update
-          sudo apt install -y \
-            clang \
+          sudo apt-get update
+          sudo apt-get install -y \
             gcc-arm-none-eabi \
-            libnewlib-arm-none-eabi \
-            cmake \
+            clang \
             make \
             git \
             python3 \
             python3-pip
 
-      - name: Clone Ledger Nano SDK
+      - name: Clone Ledger SDK
         run: |
-          git clone https://github.com/LedgerHQ/nanos-secure-sdk.git
-          echo "SDK_PATH=$(pwd)/nanos-secure-sdk" >> $GITHUB_ENV
+          git clone https://github.com/LedgerHQ/ledger-secure-sdk.git sdk
 
-     - name: Build Honey Ledger App
-  run: |
-    export BOLOS_SDK=$SDK_PATH
-    export TARGET=nanos
-    make
-
+      - name: Build Honey Ledger App (Nano S)
+        run: |
+          export BOLOS_SDK=$PWD/sdk
+          export TARGET=nanos
+          make
