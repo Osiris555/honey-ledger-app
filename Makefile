@@ -1,8 +1,10 @@
 APPNAME = Honey
-APPVERSION = 0.1.0
-ICONNAME = icon.gif
+APPVERSION = 1.0.0
+APP_LOAD_PARAMS = --appFlags 0x240 --path "44'/118'/0'/0/0"
 
-SOURCE_FILES = src/main.c
+ifeq ($(TARGET_NAME),)
+TARGET_NAME = $(TARGET)
+endif
 
-include $(BOLOS_SDK)/Makefile.defines
-include $(BOLOS_SDK)/Makefile.rules
+include sdk/Makefile.defines
+include sdk/Makefile.rules
