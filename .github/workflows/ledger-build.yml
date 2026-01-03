@@ -2,7 +2,8 @@ name: Ledger Nano App Build
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   build:
@@ -15,22 +16,14 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            gcc-arm-none-eabi \
-            clang \
-            make \
-            git \
-            python3 \
-            python3-pip
+          sudo apt-get install -y git make python3 python3-pip
 
       - name: Clone Ledger SDK
         run: |
           git clone https://github.com/LedgerHQ/ledger-secure-sdk.git sdk
 
       - name: Build Honey Ledger App (Nano S Plus)
-  run: |
-    export BOLOS_SDK=$PWD/sdk
-    make clean
-    make TARGET=nanos2
-
-
+        run: |
+          export BOLOS_SDK=$PWD/sdk
+          make clean
+          make TARGET=nanos2
