@@ -1,0 +1,21 @@
+name: Ledger Nano S Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ledger SDK
+        uses: LedgerHQ/ledger-app-builder@v2
+
+      - name: Build Nano S
+        run: |
+          make clean
+          make
