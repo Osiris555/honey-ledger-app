@@ -9,13 +9,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    container:
+      image: ghcr.io/ledgerhq/ledger-app-builder:latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Set up Ledger SDK
-        uses: LedgerHQ/ledger-app-builder@latest
-
-      - name: Build Nano S
+      - name: Build Nano S app
         run: |
           make clean
           make
