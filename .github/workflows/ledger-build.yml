@@ -9,14 +9,20 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    container:
-      image: ghcr.io/ledgerhq/ledger-app-builder:latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build Nano S app
-        run: |
-          make clean
-          make
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Ledger app
+        uses: docker://ghcr.io/ledgerhq/ledger-app-builder:latest
+        with:
+          args: |
+            make clean
+            make
