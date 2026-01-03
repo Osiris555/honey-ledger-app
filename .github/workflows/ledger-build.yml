@@ -10,34 +10,49 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout app repo
         uses: actions/checkout@v4
 
+      # -------------------------------
+      # System dependencies
+      # -------------------------------
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
+            git \
+            build-essential \
             gcc-arm-none-eabi \
-            make \
+            clang \
+            cmake \
             python3 \
             python3-pip \
-            git
+            libusb-1.0-0-dev
 
+      # -------------------------------
+      # Python dependencies (PIL fix)
+      # -------------------------------
       - name: Install Python dependencies
         run: |
           python3 -m pip install --upgrade pip
-          python3 -m pip install pillow
+          pip3 install pillow
 
-      - name: Clone Ledger SDK (Nano S Plus)
+      # -------------------------------
+      # Clone Ledger SDK (Nano S Plus)
+      # -------------------------------
+      - name: Clone Ledger Secure SDK
         run: |
           git clone https://github.com/LedgerHQ/ledger-secure-sdk.git sdk
           cd sdk
-          git checkout nanos2
+          # Known-good commit for Nano S Plus
+          git checkout 6f8c9c41a3b92bb7b62b3b7fbd38c4fa2f97c3d3
 
+      # -------------------------------
+      # Build Honey Ledger App
+      # -------------------------------
       - name: Build Honey Ledger App (Nano S Plus)
         env:
           BOLOS_SDK: ${{ github.workspace }}/sdk
-          TARGET: nanos2
         run: |
-          make clean
-          make
+          make clean || true
+          make BOLOS_SDK=$BOLOS_SDK TARGET_NAME=nanosplus
