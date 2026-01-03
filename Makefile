@@ -1,10 +1,8 @@
 APPNAME = Honey
 APPVERSION = 0.1.0
+ICONNAME = icon.gif
 
-SDK_PATH ?= /ledger-secure-sdk
+SOURCE_FILES = src/main.c
 
-CFLAGS += -Iinclude
-
-SOURCES = src/main.c
-
-include $(SDK_PATH)/Makefile.standard_app
+include $(BOLOS_SDK)/Makefile.defines
+include $(BOLOS_SDK)/Makefile.rules

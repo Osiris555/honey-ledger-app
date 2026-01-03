@@ -30,7 +30,9 @@ jobs:
           git clone https://github.com/LedgerHQ/nanos-secure-sdk.git
           echo "SDK_PATH=$(pwd)/nanos-secure-sdk" >> $GITHUB_ENV
 
-      - name: Build Honey Ledger App
-        run: |
-          export BOLOS_SDK=$SDK_PATH
-          make
+     - name: Build Honey Ledger App
+  run: |
+    export BOLOS_SDK=$SDK_PATH
+    export TARGET=nanos
+    make
+

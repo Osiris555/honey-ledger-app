@@ -1,11 +1,10 @@
 #include "os.h"
 #include "cx.h"
-#include "ux.h"
 
-__attribute__((section(".boot"))) int main(void) {
-    os_boot();
-
+__attribute__((section(".boot")))
+int main(void) {
     for (;;) {
         // Idle loop
     }
+    return 0;
 }
