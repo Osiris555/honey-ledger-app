@@ -10,10 +10,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout app repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Build Honey Ledger App (Nano S Plus)
-        uses: LedgerHQ/ledger-app-builder@main
+        uses: docker://ghcr.io/ledgerhq/ledger-app-builder:latest
         with:
-          target: nanosplus
+          args: |
+            make
