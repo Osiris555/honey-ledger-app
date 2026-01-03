@@ -14,7 +14,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build Honey Ledger App (Nano S Plus)
-        uses: docker://ghcr.io/ledgerhq/ledger-app-builder:latest
+        uses: docker://ghcr.io/ledgerhq/ledger-app-builder:stable
         with:
           args: |
             make
