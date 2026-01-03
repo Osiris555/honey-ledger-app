@@ -13,7 +13,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Pull Ledger App Builder image
+        run: |
+          docker pull ghcr.io/ledgerhq/ledger-app-builder:latest
+
       - name: Build Honey Ledger App (Nano S Plus)
-        uses: LedgerHQ/ledger-app-builder@master
-        with:
-          target: nanosplus
+        run: |
+          docker run --rm \
+            -v "$PWD:/app" \
+            -w /app \
+            ghcr.io/ledgerhq/ledger-app-builder:latest \
+            make
