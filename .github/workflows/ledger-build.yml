@@ -30,5 +30,6 @@ jobs:
       - name: Build Honey Ledger App (Nano S Plus)
   run: |
     export BOLOS_SDK=$PWD/sdk
+    make clean
     make TARGET=nanos2
 
