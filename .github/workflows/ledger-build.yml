@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Ledger SDK
-        uses: LedgerHQ/ledger-app-builder@v2
+        uses: LedgerHQ/ledger-app-builder@latest
 
       - name: Build Nano S
         run: |
