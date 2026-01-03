@@ -23,7 +23,8 @@ jobs:
           git clone https://github.com/LedgerHQ/ledger-secure-sdk.git sdk
 
       - name: Build Honey Ledger App (Nano S Plus)
-        run: |
-          export BOLOS_SDK=$PWD/sdk
-          make clean
-          make TARGET=nanos2
+  run: |
+    export BOLOS_SDK=$PWD/sdk
+    make clean
+    make TARGET=nanos2
+
