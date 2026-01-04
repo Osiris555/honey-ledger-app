@@ -3,6 +3,11 @@
 #include <stdint.h>
 #include "tx.h"
 
+/* Idle screen */
 void ui_idle(void);
-void ui_show_address(const char *addr);
+
+/* Address verification */
+void ui_verify_address(const char *addr);
+
+/* Transaction confirmation */
 void ui_confirm_tx(const honey_tx_t *tx);

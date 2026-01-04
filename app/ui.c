@@ -4,7 +4,7 @@
 #include <string.h>
 #include <stdio.h>
 
-/* ---------- GLOBAL STATE ---------- */
+/* ---------- DISPLAY BUFFERS ---------- */
 
 static char line1[32];
 static char line2[32];
@@ -13,7 +13,7 @@ static char line4[32];
 
 static const honey_tx_t *pending_tx = NULL;
 
-/* ---------- UX FLOW DECLARATIONS ---------- */
+/* ---------- IDLE ---------- */
 
 UX_STEP_NOCB(
     ux_idle_step,
@@ -29,20 +29,56 @@ UX_FLOW(
     &ux_idle_step
 );
 
-/* ---------- ADDRESS DISPLAY ---------- */
+/* ---------- ADDRESS VERIFICATION ---------- */
 
 UX_STEP_NOCB(
-    ux_address_step,
+    ux_addr_warning_step,
     nn,
     {
-        "Your Address",
+        "Verify Address",
+        "On Device"
+    }
+);
+
+UX_STEP_NOCB(
+    ux_addr_value_step,
+    nn,
+    {
+        "Address",
         line1
+    }
+);
+
+UX_STEP_CB(
+    ux_addr_approve_step,
+    pb,
+    {
+        &C_icon_validate_14,
+        "Approve",
+    },
+    {
+        os_sched_exit(0);
+    }
+);
+
+UX_STEP_CB(
+    ux_addr_reject_step,
+    pb,
+    {
+        &C_icon_crossmark,
+        "Reject",
+    },
+    {
+        THROW(0x6985); // User rejected
     }
 );
 
 UX_FLOW(
     ux_address_flow,
-    &ux_address_step
+    &ux_addr_warning_step,
+    &ux_addr_value_step,
+    &ux_addr_approve_step,
+    &ux_addr_reject_step
 );
 
 /* ---------- TRANSACTION CONFIRMATION ---------- */
@@ -103,7 +139,7 @@ UX_STEP_CB(
         "Reject",
     },
     {
-        THROW(0x6985); // User rejected
+        THROW(0x6985);
     }
 );
 
@@ -123,12 +159,16 @@ void ui_idle(void) {
     ux_flow_init(0, ux_idle_flow, NULL);
 }
 
-void ui_show_address(const char *addr) {
+/* Address must be shown and approved on-device */
+void ui_verify_address(const char *addr) {
+
     strncpy(line1, addr, sizeof(line1) - 1);
     line1[sizeof(line1) - 1] = 0;
+
     ux_flow_init(0, ux_address_flow, NULL);
 }
 
+/* Blind-signing protected transaction confirmation */
 void ui_confirm_tx(const honey_tx_t *tx) {
 
     pending_tx = tx;
@@ -136,7 +176,6 @@ void ui_confirm_tx(const honey_tx_t *tx) {
     snprintf(line1, sizeof(line1), "%llu", (unsigned long long)tx->amount);
     snprintf(line2, sizeof(line2), "%llu", (unsigned long long)tx->fee);
 
-    // Show first 8 bytes of destination
     snprintf(
         line3,
         sizeof(line3),
