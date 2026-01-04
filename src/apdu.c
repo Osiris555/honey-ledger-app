@@ -28,17 +28,19 @@ void handle_apdu(uint8_t *apdu_buffer, uint16_t apdu_length) {
         case INS_SIGN_TX: {
     	    uint64_t amount = read_u64(data_buffer);
 
-    ui_sign_tx_init(amount);
+    	    ui_sign_tx_start(amount);
 
-    	    if (!ui_sign_tx_approve()) {
-            	THROW(0x6985); // User rejected
+    	    while (ux_flow_is_active()) {
+        	os_sched_yield();
     }
 
-    sign_transaction(data_buffer, data_length, response_buffer, &tx);
+    	    if (!ui_sign_tx_approved()) {
+        	THROW(0x6985); // User rejected
+    }
 
-    break;
+    	    sign_transaction(data_buffer, data_length, response_buffer, &tx);
+    	    break;
 }
-
 
         case INS_SIGN_FINAL:
             handle_sign_final();

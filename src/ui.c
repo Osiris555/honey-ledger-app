@@ -1,26 +1,76 @@
 #include "os.h"
 #include "ux.h"
-#include "globals.h"
+#include "ui.h"
 
-static ux_layout_t ux;
+static ux_step_t ux_steps[4];
+static ux_flow_t ux_flow;
 
-static const char *review_title = "Review Tx";
-static char amount_buffer[32];
+static char amount_text[32];
+static bool approved = false;
 
-void ui_sign_tx_init(uint64_t amount) {
-    snprintf(amount_buffer, sizeof(amount_buffer), "%llu HNY", amount);
+/* ---------- UI Steps ---------- */
 
-    ux_layout_paging_init(
-        &ux,
-        review_title,
-        amount_buffer
+UX_STEP_NOCB(
+    ux_review_step,
+    pnn,
+    {
+        &C_icon_eye,
+        "Review",
+        "Transaction"
+    }
+);
+
+UX_STEP_NOCB(
+    ux_amount_step,
+    bnnn_paging,
+    {
+        "Amount",
+        amount_text
+    }
+);
+
+UX_STEP_CB(
+    ux_approve_step,
+    pbb,
+    {
+        &C_icon_validate_14,
+        "Approve",
+        "transaction",
+    },
+    {
+        approved = true;
+        ux_flow_exit();
+    }
+);
+
+UX_STEP_CB(
+    ux_reject_step,
+    pbb,
+    {
+        &C_icon_crossmark,
+        "Reject",
+        "transaction",
+    },
+    {
+        approved = false;
+        ux_flow_exit();
+    }
+);
+
+/* ---------- Flow ---------- */
+
+void ui_sign_tx_start(uint64_t amount) {
+    snprintf(amount_text, sizeof(amount_text), "%llu HNY", amount);
+    approved = false;
+
+    ux_flow_init(
+        0,
+        &ux_flow,
+        ux_steps,
+        ARRAYLEN(ux_steps)
     );
 }
 
-bool ui_sign_tx_approve(void) {
-    return true;
-}
-
-bool ui_sign_tx_reject(void) {
-    return false;
+bool ui_sign_tx_approved(void) {
+    return approved;
 }
