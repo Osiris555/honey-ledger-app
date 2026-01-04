@@ -1,18 +1,15 @@
 #include "os.h"
 #include "cx.h"
 #include "honey.h"
-#include <string.h>
 
 unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
 
-honey_tx_t parsed_tx;
-bool tx_approved = false;
-
-static void handle_apdu(uint8_t *apdu_buffer) {
-    uint8_t cla = apdu_buffer[0];
-    uint8_t ins = apdu_buffer[1];
-    uint16_t lc = apdu_buffer[4];
-    uint8_t *data = &apdu_buffer[5];
+static void handle_apdu(uint8_t *apdu) {
+    uint8_t cla = apdu[0];
+    uint8_t ins = apdu[1];
+    uint8_t p1  = apdu[2];
+    uint16_t lc = apdu[4];
+    uint8_t *data = &apdu[5];
 
     if (cla != CLA_HONEY) {
         THROW(0x6E00);
@@ -20,17 +17,18 @@ static void handle_apdu(uint8_t *apdu_buffer) {
 
     switch (ins) {
         case INS_SIGN_TX:
-            handle_sign_tx(data, lc);
+            handle_sign_tx(p1, data, lc);
 
-            memcpy(G_io_seproxyhal_spi_buffer,
-                   signature,
-                   signature_len);
-
-            io_seproxyhal_send(
-                G_io_seproxyhal_spi_buffer,
-                signature_len,
-                0x9000
-            );
+            if (p1 == P1_FINISH) {
+                memcpy(G_io_seproxyhal_spi_buffer,
+                       signature,
+                       signature_len);
+                io_seproxyhal_send(
+                    G_io_seproxyhal_spi_buffer,
+                    signature_len,
+                    0x9000
+                );
+            }
             break;
 
         default:
@@ -55,8 +53,7 @@ int main(void) {
             CATCH_OTHER(e) {
                 io_seproxyhal_send_status(e);
             }
-            FINALLY {
-            }
+            FINALLY {}
         }
         END_TRY;
     }
