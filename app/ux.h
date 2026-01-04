@@ -1,4 +1,5 @@
-#ifndef UX_H
-#define UX_H
-void ux_idle(void);
-#endif
+#pragma once
+
+void ui_display_tx(void);
+void ui_approve_tx(void);
+void ui_reject_tx(void);
