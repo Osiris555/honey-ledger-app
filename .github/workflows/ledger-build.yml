@@ -2,26 +2,18 @@ name: Honey Ledger App Build
 
 on:
   push:
-    branches:
-      - main
   pull_request:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Pull Ledger App Builder image
-        run: |
-          docker pull ledgerhq/ledger-app-builder:latest
 
       - name: Build Honey Ledger App (Nano S Plus)
         run: |
           docker run --rm \
             -v "$PWD:/app" \
-            -w /app \
-            ledgerhq/ledger-app-builder:latest \
+            ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest \
             make
