@@ -1,9 +1,16 @@
-#ifndef HONEY_APDU_H
-#define HONEY_APDU_H
+#pragma once
 
 #include <stdint.h>
 
-void handle_get_version(uint8_t *buffer, uint16_t *tx_len);
-void handle_ping(uint8_t *buffer, uint16_t *tx_len);
+// APDU constants
+#define CLA_HONEY  0xE0
 
-#endif
+#define INS_GET_VERSION 0x01
+
+// Status words
+#define SW_OK                 0x9000
+#define SW_INS_NOT_SUPPORTED  0x6D00
+#define SW_CLA_NOT_SUPPORTED  0x6E00
+
+// Entry point
+void handle_apdu(uint8_t cla, uint8_t ins);
