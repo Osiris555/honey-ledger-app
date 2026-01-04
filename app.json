@@ -1,23 +1,32 @@
 {
-  "schemaVersion": 1,
   "name": "Honey",
-  "displayName": "Honey Wallet",
-  "description": "Secure hardware wallet application for the Honey (HNY) blockchain",
-  "homepageUrl": "https://queenbeecams.com",
+  "version": "1.2.0",
+  "description": "Honey (HNY) Ledger application for secure transaction signing",
   "icon": "icon.png",
-  "keywords": [
-    "honey",
-    "hny",
-    "crypto",
-    "blockchain",
-    "hardware wallet"
-  ],
-  "appId": "com.honey.wallet",
-  "author": "Honey Labs",
-  "supportUrl": "https://queenbeecams.com",
-  "sourceUrl": "https://github.com/Osiris555/honey-ledger-app",
+  "type": "app",
+  "category": "crypto",
+  "author": "Honey Network",
   "license": "Apache-2.0",
-  "categories": ["cryptocurrency"],
-  "devices": ["nanos"],
-  "version": "0.5.0"
+
+  "supported_devices": [
+    "nano_s",
+    "nano_x",
+    "nano_s_plus"
+  ],
+
+  "derivation_paths": [
+    "44'/60'/0'/0/0"
+  ],
+
+  "apdu": {
+    "cla": "0xE0",
+    "instructions": [
+      {
+        "ins": "0x01",
+        "name": "SIGN_TX",
+        "p1_values": ["0x00", "0x01", "0x02"],
+        "description": "Sign Honey transaction (chunked APDU)"
+      }
+    ]
+  }
 }
