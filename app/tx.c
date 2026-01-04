@@ -1,34 +1,69 @@
 #include "tx.h"
 #include "cx.h"
+#include "os.h"
 
 #include <string.h>
 
-static void serialize_tx(const honey_tx_t *tx, uint8_t *buf) {
-    uint8_t offset = 0;
+/* ---------- VALIDATION ---------- */
 
-    buf[offset++] = tx->version;
+int honey_tx_validate(const honey_tx_t *tx) {
 
-    memcpy(buf + offset, &tx->nonce, 8);
-    offset += 8;
+    if (tx == NULL)
+        return 0;
 
-    memcpy(buf + offset, tx->to, 20);
-    offset += 20;
+    if (tx->version != HONEY_TX_VERSION)
+        return 0;
 
-    memcpy(buf + offset, tx->amount, 32);
-    offset += 32;
+    if (tx->memo_len > HONEY_TX_MAX_MEMO_LEN)
+        return 0;
 
-    memcpy(buf + offset, &tx->fee, 8);
-    offset += 8;
+    if (tx->amount == 0)
+        return 0;
 
-    memcpy(buf + offset, &tx->chain_id, 4);
+    if (tx->fee == 0)
+        return 0;
+
+    // Prevent overflow: amount + fee must not wrap
+    if (tx->amount + tx->fee < tx->amount)
+        return 0;
+
+    // Prevent sending to zero address
+    int zero = 1;
+    for (int i = 0; i < 20; i++) {
+        if (tx->to[i] != 0) {
+            zero = 0;
+            break;
+        }
+    }
+
+    if (zero)
+        return 0;
+
+    return 1;
 }
 
+/* ---------- HASHING ---------- */
+
 void honey_tx_hash(const honey_tx_t *tx, uint8_t out[32]) {
-    uint8_t serialized[HONEY_TX_SIZE];
-    uint8_t tmp[32];
 
-    serialize_tx(tx, serialized);
+    cx_sha256_t ctx;
+    cx_sha256_init(&ctx);
 
-    cx_hash_sha256(serialized, HONEY_TX_SIZE, tmp, 32);
-    cx_hash_sha256(tmp, 32, out, 32);
+    cx_hash(
+        (cx_hash_t *)&ctx,
+        0,
+        (uint8_t *)tx,
+        sizeof(honey_tx_t),
+        NULL,
+        0
+    );
+
+    cx_hash(
+        (cx_hash_t *)&ctx,
+        CX_LAST,
+        NULL,
+        0,
+        out,
+        32
+    );
 }

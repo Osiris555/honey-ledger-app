@@ -79,11 +79,15 @@ static void handle_get_address(uint16_t *tx) {
 }
 
 static void handle_sign_tx(uint16_t rx, uint16_t *tx) {
-    if (rx < sizeof(honey_tx_t))
+
+    if (rx != sizeof(honey_tx_t) + 5)
         THROW(SW_WRONG_LENGTH);
 
     honey_tx_t tx_obj;
     memcpy(&tx_obj, G_io_apdu_buffer + 5, sizeof(honey_tx_t));
+
+    if (!honey_tx_validate(&tx_obj))
+        THROW(SW_WRONG_LENGTH);
 
     ui_confirm_tx(&tx_obj);
 
