@@ -4,6 +4,7 @@
 
 #include "honey.h"
 #include "tx.h"
+#include "ui.h"
 
 #include <string.h>
 
@@ -32,6 +33,9 @@ static void handle_sign_tx(uint16_t rx, uint16_t *tx) {
 
     honey_tx_t tx_obj;
     memcpy(&tx_obj, G_io_apdu_buffer + 5, sizeof(honey_tx_t));
+
+    // 🔐 USER CONFIRMATION
+    ui_confirm_tx(&tx_obj);
 
     uint8_t hash[32];
     honey_tx_hash(&tx_obj, hash);
@@ -74,6 +78,7 @@ void app_main(void) {
     uint16_t tx = 0;
 
     generate_keypair();
+    ui_idle();
 
     for (;;) {
         rx = io_exchange(CHANNEL_APDU, tx);
