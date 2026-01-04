@@ -1,42 +1,43 @@
 #include "os.h"
 #include "cx.h"
+#include "honey.h"
 
-#include "apdu.h"
+unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
 
-unsigned char G_io_apdu_buffer[IO_APDU_BUFFER_SIZE];
-unsigned short G_io_apdu_length;
+honey_tx_t parsed_tx;
 
-static void app_main(void) {
-    for (;;) {
-        // Receive APDU
-        unsigned short rx = io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 0);
+static void handle_apdu(uint8_t *apdu_buffer, uint16_t apdu_length) {
+    uint8_t cla = apdu_buffer[0];
+    uint8_t ins = apdu_buffer[1];
+    uint16_t lc = apdu_buffer[4];
+    uint8_t *data = &apdu_buffer[5];
 
-        if (rx < 5) {
-            continue; // Invalid APDU
-        }
+    if (cla != CLA_HONEY) {
+        THROW(0x6E00); // CLA not supported
+    }
 
-        uint8_t cla = G_io_apdu_buffer[0];
-        uint8_t ins = G_io_apdu_buffer[1];
+    switch (ins) {
+        case INS_SIGN_TX:
+            handle_sign_tx(data, lc);
+            break;
 
-        handle_apdu(cla, ins);
-
-        // Send response
-        io_exchange(CHANNEL_APDU, G_io_apdu_length);
+        default:
+            THROW(0x6D00); // INS not supported
     }
 }
 
-__attribute__((noreturn))
-void main(void) {
+int main(void) {
     os_boot();
 
     for (;;) {
         BEGIN_TRY {
             TRY {
-                app_main();
+                io_seproxyhal_init();
+                io_seproxyhal_spi_recv(G_io_seproxyhal_spi_buffer, sizeof(G_io_seproxyhal_spi_buffer), 0);
+                handle_apdu(G_io_seproxyhal_spi_buffer, sizeof(G_io_seproxyhal_spi_buffer));
             }
             CATCH_OTHER(e) {
-                // Reset on error
-                os_sched_exit(-1);
+                io_seproxyhal_send_status(e);
             }
             FINALLY {
             }
