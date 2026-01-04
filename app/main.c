@@ -13,14 +13,39 @@ unsigned char G_io_apdu_buffer[IO_APDU_BUFFER_SIZE];
 static cx_ecfp_private_key_t private_key;
 static cx_ecfp_public_key_t public_key;
 
-static void generate_keypair(void) {
+/* ---------- BIP32 KEY DERIVATION ---------- */
+
+static void derive_keypair(void) {
+    uint8_t private_key_data[32];
+    uint8_t chain_code[32];
+
+    os_perso_derive_node_bip32(
+        CX_CURVE_256K1,
+        HONEY_BIP32_PATH,
+        HONEY_BIP32_PATH_LEN,
+        private_key_data,
+        chain_code
+    );
+
+    cx_ecfp_init_private_key(
+        CX_CURVE_256K1,
+        private_key_data,
+        sizeof(private_key_data),
+        &private_key
+    );
+
     cx_ecfp_generate_pair(
         CX_CURVE_256K1,
         &public_key,
         &private_key,
         1
     );
+
+    explicit_bzero(private_key_data, sizeof(private_key_data));
+    explicit_bzero(chain_code, sizeof(chain_code));
 }
+
+/* ---------- APDU HANDLERS ---------- */
 
 static void handle_get_public_key(uint16_t *tx) {
     memcpy(G_io_apdu_buffer, public_key.W, PUBKEY_LEN);
@@ -73,11 +98,13 @@ static void handle_apdu(uint8_t ins, uint16_t rx, uint16_t *tx) {
     }
 }
 
+/* ---------- MAIN LOOP ---------- */
+
 void app_main(void) {
     uint16_t rx = 0;
     uint16_t tx = 0;
 
-    generate_keypair();
+    derive_keypair();
     ui_idle();
 
     for (;;) {

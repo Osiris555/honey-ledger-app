@@ -16,20 +16,25 @@
 #pragma once
 
 #include <stdint.h>
-#include <stdbool.h>
 
-/* APDU class */
-#define HONEY_CLA 0xE0
+#define CLA_HONEY              0xE0
 
-/* Instructions */
-#define INS_GET_PUBLIC_KEY 0x02
-#define INS_SIGN_TX        0x04
+#define INS_GET_PUBLIC_KEY     0x02
+#define INS_SIGN_TX            0x04
 
-/* Status words */
-#define SW_OK                 0x9000
-#define SW_INS_NOT_SUPPORTED  0x6D00
-#define SW_WRONG_LENGTH       0x6700
+#define SW_OK                  0x9000
+#define SW_INS_NOT_SUPPORTED   0x6D00
+#define SW_WRONG_LENGTH        0x6700
 
-/* Sizes */
-#define PUBKEY_LEN 33   // compressed secp256k1
-#define ADDRESS_LEN 20  // Honey address (hash160)
+#define PUBKEY_LEN             65
+
+// BIP32 path: m/44'/118'/0'/0/0
+#define HONEY_BIP32_PATH_LEN 5
+
+static const uint32_t HONEY_BIP32_PATH[HONEY_BIP32_PATH_LEN] = {
+    44  | 0x80000000,
+    118 | 0x80000000,
+    0   | 0x80000000,
+    0,
+    0
+};
