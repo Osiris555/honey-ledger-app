@@ -1,0 +1,32 @@
+{
+  "name": "Honey",
+  "version": "1.2.0",
+  "description": "Honey (HNY) Ledger application for secure transaction signing",
+  "icon": "icon.png",
+  "type": "app",
+  "category": "crypto",
+  "author": "Honey Network",
+  "license": "Apache-2.0",
+
+  "supported_devices": [
+    "nano_s",
+    "nano_x",
+    "nano_s_plus"
+  ],
+
+  "derivation_paths": [
+    "44'/60'/0'/0/0"
+  ],
+
+  "apdu": {
+    "cla": "0xE0",
+    "instructions": [
+      {
+        "ins": "0x01",
+        "name": "SIGN_TX",
+        "p1_values": ["0x00", "0x01", "0x02"],
+        "description": "Sign Honey transaction (chunked APDU)"
+      }
+    ]
+  }
+}

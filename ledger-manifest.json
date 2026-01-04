@@ -1,0 +1,34 @@
+{
+  "application": {
+    "name": "Honey",
+    "version": "1.2.0",
+    "homepage": "https://queenbeecams.com",
+    "description": "Secure Ledger app for signing Honey (HNY) blockchain transactions",
+    "author": "Honey Network"
+  },
+
+  "permissions": {
+    "wallet": true,
+    "blind_signing": false
+  },
+
+  "protocol": {
+    "cla": "0xE0",
+    "instructions": {
+      "SIGN_TX": {
+        "ins": "0x01",
+        "chunked": true,
+        "ui_required": true
+      }
+    }
+  },
+
+  "cryptography": {
+    "curve": "secp256k1",
+    "hash": "sha256"
+  },
+
+  "paths": {
+    "default": "44'/60'/0'/0/0"
+  }
+}

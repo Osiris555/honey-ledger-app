@@ -1,0 +1,21 @@
+name: Honey Ledger App Build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Honey Ledger App (Nano S Plus)
+        run: |
+          docker run --rm \
+            -e BOLOS_SDK=/opt/ledger-secure-sdk \
+            -v "$PWD:/app" \
+            ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest \
+            make
