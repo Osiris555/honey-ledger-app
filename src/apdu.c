@@ -26,9 +26,19 @@ void handle_apdu(uint8_t *apdu_buffer, uint16_t apdu_length) {
             break;
 
         case INS_SIGN_TX: {
-    	    uint64_t amount = read_u64(data_buffer);
+    	    const uint8_t *ptr = data_buffer;
 
-    	    ui_sign_tx_start(amount);
+    	    char recipient[64];
+    	    memcpy(recipient, ptr, 32);
+    	    recipient[32] = '\0';
+    	    ptr += 32;
+
+    	    uint64_t amount = read_u64(ptr);
+    	    ptr += 8;
+
+    	    uint64_t fee = read_u64(ptr);
+
+    	    ui_sign_tx_start(recipient, amount, fee);
 
     	    while (ux_flow_is_active()) {
         	os_sched_yield();
@@ -38,9 +48,15 @@ void handle_apdu(uint8_t *apdu_buffer, uint16_t apdu_length) {
         	THROW(0x6985); // User rejected
     }
 
-    	    sign_transaction(data_buffer, data_length, response_buffer, &tx);
+    	    sign_transaction(
+        	data_buffer,
+        	data_length,
+        	response_buffer,
+        	&tx
+    	    );
     	    break;
 }
+
 
         case INS_SIGN_FINAL:
             handle_sign_final();
