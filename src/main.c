@@ -1,78 +1,47 @@
 #include "os.h"
 #include "cx.h"
-#include "honey.h"
-#include "ux.h"
+#include "globals.h"
+#include "ui.h"
+#include "handler_sign_tx.h"
+#include <string.h>
 
-honey_ctx_t G_honey_ctx;
-honey_settings_t G_honey_settings = {
-    .blind_signing_enabled = false
-};
+#define CLA 0xE0
+#define INS_GET_PUBLIC_KEY 0x02
+#define INS_SIGN_TX       0x04
 
-static void handle_sign_tx(uint8_t *data, uint16_t len) {
-    if (!G_honey_settings.blind_signing_enabled &&
-        len != sizeof(honey_tx_t)) {
-        THROW(0x6985); // conditions not satisfied
-    }
-
-    if (len == sizeof(honey_tx_t)) {
-        os_memmove(&G_honey_ctx.tx, data, sizeof(honey_tx_t));
-        G_honey_ctx.ready = true;
-        ui_display_tx();
-    } else {
-        // Blind signing path
-        ui_show_blind_status();
-    }
-}
-
-static void handle_get_settings(void) {
-    uint8_t out[1] = { G_honey_settings.blind_signing_enabled };
-    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 1);
-}
-
-static void handle_set_blind(uint8_t *data, uint16_t len) {
-    if (len != 1) THROW(0x6700);
-    G_honey_settings.blind_signing_enabled = data[0] ? true : false;
-    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 0x9000);
-}
-
-void handle_apdu(uint8_t *buffer, uint16_t size) {
-    uint8_t cla = buffer[0];
-    uint8_t ins = buffer[1];
-    uint8_t lc  = buffer[4];
-    uint8_t *data = buffer + 5;
-
-    if (cla != HONEY_CLA) THROW(0x6E00);
-
-    switch (ins) {
-        case INS_SIGN_TX:
-            handle_sign_tx(data, lc);
-            break;
-        case INS_GET_SETTINGS:
-            handle_get_settings();
-            break;
-        case INS_SET_BLIND:
-            handle_set_blind(data, lc);
-            break;
-        default:
-            THROW(0x6D00);
-    }
-}
-
-int main(void) {
-    os_boot();
+void app_main(void) {
+    ui_idle();
 
     for (;;) {
-        BEGIN_TRY {
-            TRY {
-                uint8_t apdu[260];
-                uint16_t rx = io_exchange(CHANNEL_APDU, sizeof(apdu));
-                handle_apdu(apdu, rx);
-            }
-            CATCH_OTHER(e) {
-                io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, e);
-            }
-            FINALLY {}
+        unsigned int rx = io_exchange(CHANNEL_APDU, 0);
+
+        if (rx == 0) continue;
+
+        uint8_t cla = G_io_apdu_buffer[0];
+        uint8_t ins = G_io_apdu_buffer[1];
+        uint8_t p1  = G_io_apdu_buffer[2];
+        uint8_t p2  = G_io_apdu_buffer[3];
+        uint8_t lc  = G_io_apdu_buffer[4];
+
+        uint8_t *data = G_io_apdu_buffer + 5;
+
+        if (cla != CLA) {
+            THROW(0x6E00);
         }
-        END_TRY;
+
+        switch (ins) {
+
+            case INS_GET_PUBLIC_KEY:
+                // existing handler assumed
+                THROW(0x9000);
+                break;
+
+            case INS_SIGN_TX:
+                handle_sign_tx(p1, p2, data, lc);
+                break;
+
+            default:
+                THROW(0x6D00);
+        }
     }
 }

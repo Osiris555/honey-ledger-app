@@ -1,100 +1,71 @@
-#include "os.h"
+#include "ui.h"
 #include "ux.h"
-#include "honey.h"
-#include <string.h>
+#include "os.h"
 
-/* ================================
- * Globals
- * ================================ */
-
-char G_tx_recipient[HONEY_ADDR_LEN];
-char G_tx_amount[32];
-bool G_tx_approved = false;
-
-/* ================================
- * Callbacks
- * ================================ */
-
-static void ui_tx_approve(void) {
-    G_tx_approved = true;
-    ux_flow_exit();
-}
-
-static void ui_tx_reject(void) {
-    G_tx_approved = false;
-    ux_flow_exit();
-}
-
-/* ================================
- * UI Steps
- * ================================ */
+/* ---------- IDLE SCREEN ---------- */
 
 UX_STEP_NOCB(
-    ux_tx_title_step,
+    ux_idle_step,
+    pnn,
+    {
+        &C_icon_dashboard,
+        "Honey",
+        "Ready",
+    }
+);
+
+UX_FLOW(
+    ux_idle_flow,
+    &ux_idle_step
+);
+
+void ui_idle(void) {
+    ux_flow_init(0, ux_idle_flow, NULL);
+}
+
+/* ---------- APPROVE TX ---------- */
+
+UX_STEP_NOCB(
+    ux_sign_tx_step,
     pnn,
     {
         &C_icon_eye,
-        "Review",
-        "Transaction",
-    }
-);
-
-UX_STEP_NOCB(
-    ux_tx_recipient_step,
-    bnnn_paging,
-    {
-        .title = "To",
-        .text = G_tx_recipient,
-    }
-);
-
-UX_STEP_NOCB(
-    ux_tx_amount_step,
-    bnnn_paging,
-    {
-        .title = "Amount (HNY)",
-        .text = G_tx_amount,
+        "Sign Honey",
+        "transaction?",
     }
 );
 
 UX_STEP_CB(
-    ux_tx_approve_step,
+    ux_sign_tx_approve,
     pb,
-    ui_tx_approve(),
     {
         &C_icon_validate_14,
         "Approve",
+    },
+    {
+        // Continue signing
     }
 );
 
 UX_STEP_CB(
-    ux_tx_reject_step,
+    ux_sign_tx_reject,
     pb,
-    ui_tx_reject(),
     {
         &C_icon_crossmark,
         "Reject",
+    },
+    {
+        THROW(0x6985);
     }
 );
 
-/* ================================
- * Flow
- * ================================ */
-
 UX_FLOW(
-    ux_confirm_tx_flow,
-    &ux_tx_title_step,
-    &ux_tx_recipient_step,
-    &ux_tx_amount_step,
-    &ux_tx_approve_step,
-    &ux_tx_reject_step
+    ux_sign_tx_flow,
+    &ux_sign_tx_step,
+    &ux_sign_tx_approve,
+    &ux_sign_tx_reject
 );
 
-/* ================================
- * Public entry
- * ================================ */
-
-void ui_confirm_transaction(void) {
-    G_tx_approved = false;
-    ux_flow_init(0, ux_confirm_tx_flow, NULL);
+void ui_approve_tx(void) {
+    ux_flow_init(0, ux_sign_tx_flow, NULL);
 }
