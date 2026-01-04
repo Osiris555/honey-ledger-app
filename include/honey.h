@@ -18,13 +18,14 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "cx.h"
 
 /* ================================
- * App metadata
+ * App
  * ================================ */
 
 #define APPNAME "Honey"
-#define APPVERSION "0.2.0"
+#define APPVERSION "0.3.0"
 
 /* ================================
  * APDU
@@ -36,7 +37,7 @@
 #define INS_SIGN_TX      0x03
 
 /* ================================
- * Token constants
+ * Token
  * ================================ */
 
 #define HONEY_DECIMALS   18
@@ -50,11 +51,17 @@
 #define HONEY_ADDR_LEN   45
 
 /* ================================
- * Globals (UI)
+ * Globals
  * ================================ */
 
 extern char G_tx_recipient[HONEY_ADDR_LEN];
 extern char G_tx_amount[32];
 extern bool G_tx_approved;
+
+/* ================================
+ * Crypto
+ * ================================ */
+
+extern cx_ecfp_private_key_t G_private_key;
 
 #endif
