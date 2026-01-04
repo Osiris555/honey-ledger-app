@@ -1,140 +1,76 @@
-#include "os.h"
-#include "cx.h"
-#include "honey.h"
+#include "apdu.h"
 #include <string.h>
 
-uint8_t tx_buffer[MAX_TX_SIZE];
-uint16_t tx_buffer_len = 0;
-bool tx_in_progress = false;
+/*
+ * GET_VERSION
+ * No data allowed.
+ */
+static bool handle_get_version(
+    uint16_t data_len,
+    uint16_t *sw
+) {
+    if (data_len != 0) {
+        *sw = SW_WRONG_LENGTH;
+        return true;
+    }
 
-uint8_t tx_hash[32];
-uint8_t signature[72];
-uint16_t signature_len;
+    /* Version 1.0.0 */
+    G_io_apdu_buffer[0] = 1;
+    G_io_apdu_buffer[1] = 0;
+    G_io_apdu_buffer[2] = 0;
 
-bool tx_approved = false;
-honey_tx_t parsed_tx;
-
-static cx_ecfp_private_key_t private_key;
-
-static void reset_tx(void) {
-    tx_buffer_len = 0;
-    tx_in_progress = false;
-    tx_approved = false;
+    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 3);
+    *sw = SW_OK;
+    return true;
 }
 
-void handle_sign_tx(uint8_t p1, uint8_t *data, uint16_t len) {
-
-    // ---- START ----
-    if (p1 == P1_START) {
-        reset_tx();
-        tx_in_progress = true;
+/*
+ * SIGN_TX
+ * Minimal skeleton — validates length only.
+ */
+static bool handle_sign_tx(
+    const uint8_t *data,
+    uint16_t data_len,
+    uint16_t *sw
+) {
+    /* Minimal expected size (example placeholder) */
+    if (data_len < 8) {
+        *sw = SW_WRONG_LENGTH;
+        return true;
     }
 
-    if (!tx_in_progress) {
-        THROW(0x6985); // no transaction started
+    /* TODO: real parsing & UI confirmation */
+
+    *sw = SW_CONDITIONS_NOT_SATISFIED;
+    return true;
+}
+
+bool apdu_dispatch(
+    uint8_t cla,
+    uint8_t ins,
+    uint8_t p1,
+    uint8_t p2,
+    const uint8_t *data,
+    uint16_t data_len,
+    uint16_t *sw
+) {
+    (void)p1;
+    (void)p2;
+
+    if (cla != CLA_HONEY) {
+        *sw = SW_CLA_NOT_SUPPORTED;
+        return false;
     }
 
-    // ---- Bounds check ----
-    if (tx_buffer_len + len > MAX_TX_SIZE) {
-        reset_tx();
-        THROW(0x6A84); // not enough memory
+    switch (ins) {
+        case INS_GET_VERSION:
+            return handle_get_version(data_len, sw);
+
+        case INS_SIGN_TX:
+            return handle_sign_tx(data, data_len, sw);
+
+        default:
+            *sw = SW_INS_NOT_SUPPORTED;
+            return false;
     }
-
-    memcpy(tx_buffer + tx_buffer_len, data, len);
-    tx_buffer_len += len;
-
-    // ---- CONTINUE ----
-    if (p1 == P1_CONTINUE) {
-        return;
-    }
-
-    // ---- FINISH ----
-    if (p1 != P1_FINISH) {
-        THROW(0x6A86);
-    }
-
-    if (tx_buffer_len < (20 + 32)) {
-        reset_tx();
-        THROW(0x6700);
-    }
-
-    memcpy(parsed_tx.recipient, tx_buffer, 20);
-    memcpy(parsed_tx.amount, tx_buffer + 20, 32);
-
-    ux_confirm_transaction();
-    while (!tx_approved) {
-        os_sched_yield();
-    }
-
-    // ---- DOMAIN SEPARATED HASH ----
-    cx_hash_sha256_t sha;
-    cx_sha256_init(&sha);
-
-    cx_hash((cx_hash_t *)&sha, 0,
-            (uint8_t *)HONEY_DOMAIN,
-            HONEY_DOMAIN_LEN,
-            NULL, 0);
-
-    uint8_t version = HONEY_VERSION;
-    cx_hash((cx_hash_t *)&sha, 0, &version, 1, NULL, 0);
-
-    uint32_t chain_id = HONEY_CHAIN_ID;
-    uint8_t chain_id_be[4] = {
-        chain_id >> 24,
-        chain_id >> 16,
-        chain_id >> 8,
-        chain_id
-    };
-    cx_hash((cx_hash_t *)&sha, 0, chain_id_be, 4, NULL, 0);
-
-    uint8_t tx_type = 0x01;
-    cx_hash((cx_hash_t *)&sha, 0, &tx_type, 1, NULL, 0);
-
-    cx_hash((cx_hash_t *)&sha, 0,
-            parsed_tx.recipient,
-            20,
-            NULL, 0);
-
-    cx_hash((cx_hash_t *)&sha,
-            CX_LAST,
-            parsed_tx.amount,
-            32,
-            tx_hash,
-            32);
-
-    // ---- Key derivation ----
-    uint8_t raw_key[32];
-    os_perso_derive_node_bip32(
-        CX_CURVE_256K1,
-        (uint32_t[]){
-            44 | 0x80000000,
-            60 | 0x80000000,
-            0x80000000,
-            0,
-            0
-        },
-        5,
-        raw_key,
-        NULL
-    );
-
-    cx_ecfp_init_private_key(
-        CX_CURVE_256K1,
-        raw_key,
-        32,
-        &private_key
-    );
-
-    signature_len = cx_ecdsa_sign(
-        &private_key,
-        CX_RND_RFC6979 | CX_LAST,
-        CX_SHA256,
-        tx_hash,
-        32,
-        signature,
-        sizeof(signature)
-    );
-
-    explicit_bzero(raw_key, sizeof(raw_key));
-    reset_tx();
 }

@@ -1,167 +1,45 @@
-#include "os.h"
-#include "cx.h"
-#include "ux.h"
-
-#include "honey.h"
-#include "tx.h"
-#include "ui.h"
-
 #include <string.h>
-#include <stdio.h>
+#include "apdu.h"
 
-unsigned char G_io_apdu_buffer[IO_APDU_BUFFER_SIZE];
+unsigned char G_io_apdu_buffer[260];
 
-static cx_ecfp_private_key_t private_key;
-static cx_ecfp_public_key_t public_key;
-static char honey_address[HONEY_ADDR_LEN + 1];
-
-/* ---------- ADDRESS DERIVATION ---------- */
-
-static void derive_address(void) {
-    uint8_t hash[32];
-
-    cx_hash_sha256(public_key.W, PUBKEY_LEN, hash, sizeof(hash));
-
-    os_strcpy(honey_address, "hny1");
-
-    for (int i = 0; i < 20; i++) {
-        sprintf(honey_address + 4 + (i * 2), "%02x", hash[i]);
-    }
-
-    honey_address[HONEY_ADDR_LEN] = 0;
-}
-
-/* ---------- BIP32 KEY DERIVATION ---------- */
-
-static void derive_keypair(void) {
-    uint8_t private_key_data[32];
-    uint8_t chain_code[32];
-
-    os_perso_derive_node_bip32(
-        CX_CURVE_256K1,
-        HONEY_BIP32_PATH,
-        HONEY_BIP32_PATH_LEN,
-        private_key_data,
-        chain_code
-    );
-
-    cx_ecfp_init_private_key(
-        CX_CURVE_256K1,
-        private_key_data,
-        sizeof(private_key_data),
-        &private_key
-    );
-
-    cx_ecfp_generate_pair(
-        CX_CURVE_256K1,
-        &public_key,
-        &private_key,
-        1
-    );
-
-    explicit_bzero(private_key_data, sizeof(private_key_data));
-    explicit_bzero(chain_code, sizeof(chain_code));
-
-    derive_address();
-}
-
-/* ---------- APDU HANDLERS ---------- */
-
-static void handle_get_public_key(uint16_t *tx) {
-    memcpy(G_io_apdu_buffer, public_key.W, PUBKEY_LEN);
-    *tx = PUBKEY_LEN;
-}
-
-static void handle_get_address(uint16_t *tx) {
-    ui_show_address(honey_address);
-    memcpy(G_io_apdu_buffer, honey_address, HONEY_ADDR_LEN);
-    *tx = HONEY_ADDR_LEN;
-}
-
-static void handle_sign_tx(uint16_t rx, uint16_t *tx) {
-
-    if (rx != sizeof(honey_tx_t) + 5)
-        THROW(SW_WRONG_LENGTH);
-
-    honey_tx_t tx_obj;
-    memcpy(&tx_obj, G_io_apdu_buffer + 5, sizeof(honey_tx_t));
-
-    if (!honey_tx_validate(&tx_obj))
-        THROW(SW_WRONG_LENGTH);
-
-    ui_confirm_tx(&tx_obj);
-
-    uint8_t hash[32];
-    honey_tx_hash(&tx_obj, hash);
-
-    uint8_t sig[72];
-    unsigned int sig_len = sizeof(sig);
-
-    cx_ecdsa_sign(
-        &private_key,
-        CX_RND_RFC6979 | CX_LAST,
-        CX_SHA256,
-        hash,
-        32,
-        sig,
-        &sig_len
-    );
-
-    memcpy(G_io_apdu_buffer, sig, sig_len);
-    *tx = sig_len;
-}
-
-static void handle_apdu(uint8_t ins, uint16_t rx, uint16_t *tx) {
-    switch (ins) {
-
-        case INS_GET_PUBLIC_KEY:
-            handle_get_public_key(tx);
-            break;
-
-        case INS_GET_ADDRESS:
-            handle_get_address(tx);
-            break;
-
-        case INS_SIGN_TX:
-            handle_sign_tx(rx, tx);
-            break;
-
-        default:
-            THROW(SW_INS_NOT_SUPPORTED);
-    }
-}
-
-/* ---------- MAIN LOOP ---------- */
-
-void app_main(void) {
+int main(void) {
     uint16_t rx = 0;
-    uint16_t tx = 0;
-
-    derive_keypair();
-    ui_idle();
+    uint16_t sw = SW_OK;
 
     for (;;) {
-        rx = io_exchange(CHANNEL_APDU, tx);
-        tx = 0;
-
-        if (rx == 0)
+        rx = io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 0);
+        if (rx < 5) {
+            io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 0);
             continue;
-
-        uint8_t ins = G_io_apdu_buffer[1];
-
-        BEGIN_TRY {
-            TRY {
-                handle_apdu(ins, rx, &tx);
-                G_io_apdu_buffer[tx++] = 0x90;
-                G_io_apdu_buffer[tx++] = 0x00;
-            }
-            CATCH_OTHER(e) {
-                G_io_apdu_buffer[0] = (e >> 8) & 0xFF;
-                G_io_apdu_buffer[1] = e & 0xFF;
-                tx = 2;
-            }
-            FINALLY {}
         }
-        END_TRY;
+
+        uint8_t cla = G_io_apdu_buffer[0];
+        uint8_t ins = G_io_apdu_buffer[1];
+        uint8_t p1  = G_io_apdu_buffer[2];
+        uint8_t p2  = G_io_apdu_buffer[3];
+        uint8_t lc  = G_io_apdu_buffer[4];
+
+        if (rx != (uint16_t)(5 + lc)) {
+            sw = SW_WRONG_LENGTH;
+            goto send_sw;
+        }
+
+        if (!apdu_dispatch(
+            cla,
+            ins,
+            p1,
+            p2,
+            &G_io_apdu_buffer[5],
+            lc,
+            &sw
+        )) {
+            /* sw already set */
+        }
+
+send_sw:
+        G_io_apdu_buffer[0] = (uint8_t)(sw >> 8);
+        G_io_apdu_buffer[1] = (uint8_t)(sw & 0xFF);
+        io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 2);
     }
 }
