@@ -14,38 +14,22 @@
  */
 
 #pragma once
+
 #include <stdint.h>
 #include <stdbool.h>
 
+/* APDU class */
 #define HONEY_CLA 0xE0
 
-#define INS_SIGN_TX        0x01
-#define INS_GET_SETTINGS   0x02
-#define INS_SET_BLIND      0x03
+/* Instructions */
+#define INS_GET_PUBLIC_KEY 0x02
+#define INS_SIGN_TX        0x04
 
-#define MAX_TX_BUFFER 128
+/* Status words */
+#define SW_OK                 0x9000
+#define SW_INS_NOT_SUPPORTED  0x6D00
+#define SW_WRONG_LENGTH       0x6700
 
-typedef struct {
-    uint64_t amount;
-    uint32_t chain_id;
-    uint8_t  to[20];
-    uint8_t  nonce[8];
-} honey_tx_t;
-
-typedef struct {
-    honey_tx_t tx;
-    bool ready;
-} honey_ctx_t;
-
-typedef struct {
-    bool blind_signing_enabled;
-} honey_settings_t;
-
-extern honey_ctx_t G_honey_ctx;
-extern honey_settings_t G_honey_settings;
-
-// UI
-void ui_display_tx(void);
-void ui_approve_tx(void);
-void ui_reject_tx(void);
-void ui_show_blind_status(void);
+/* Sizes */
+#define PUBKEY_LEN 33   // compressed secp256k1
+#define ADDRESS_LEN 20  // Honey address (hash160)
