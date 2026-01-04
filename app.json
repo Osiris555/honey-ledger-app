@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "name": "Honey",
+  "displayName": "Honey Wallet",
+  "description": "Secure hardware wallet application for the Honey (HNY) blockchain",
+  "homepageUrl": "https://queenbeecams.com",
+  "icon": "icon.png",
+  "keywords": [
+    "honey",
+    "hny",
+    "crypto",
+    "blockchain",
+    "hardware wallet"
+  ],
+  "appId": "com.honey.wallet",
+  "author": "Honey Labs",
+  "supportUrl": "https://queenbeecams.com",
+  "sourceUrl": "https://github.com/Osiris555/honey-ledger-app",
+  "license": "Apache-2.0",
+  "categories": ["cryptocurrency"],
+  "devices": ["nanos"],
+  "version": "0.5.0"
+}
