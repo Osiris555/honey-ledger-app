@@ -1,3 +1,18 @@
+/*
+ * Honey Monetary Definitions
+ *
+ * Base unit: CONE
+ * Display unit: HONEY (HNY)
+ *
+ * 1 HNY = 10^18 CONES
+ *
+ * - All cryptographic signing uses CONES
+ * - UI formatting converts CONES → HNY
+ * - No floating-point math is used
+ *
+ * This model is fixed and protocol-level.
+ */
+
 #pragma once
 
 #include <stdint.h>

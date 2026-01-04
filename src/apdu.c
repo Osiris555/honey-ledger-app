@@ -24,6 +24,15 @@ void handle_apdu(uint8_t *apdu_buffer, uint16_t apdu_length) {
         case INS_GET_PUBLIC_KEY:
             handle_get_public_key(p1, p2, data, lc);
             break;
+/*
+ * Transaction amounts are provided in CONES (uint64 / big-int).
+ *
+ * The Ledger device signs the raw CONE value exactly as received.
+ * Any UI formatting to HNY occurs AFTER parsing and does not
+ * affect the signed payload.
+ *
+ * This guarantees full 18-decimal precision on-chain.
+ */
 
         case INS_SIGN_TX: {
     	    const uint8_t *ptr = data_buffer;
