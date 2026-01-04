@@ -4,31 +4,32 @@
 #include "nbgl_use_case.h"
 #include <stdio.h>
 
-static char amount_str[40];
-static char chain_str[20];
-static char nonce_str[20];
-static char address_str[50];
+/* ---------- GLOBAL BUFFERS (NO STACK) ---------- */
 
-static nbgl_pageInfoLongPress_t approve_page;
+static char g_amount[32];
+static char g_chain[12];
+static char g_nonce[12];
+static char g_addr[42];
 
-/* ---------- FORMAT HELPERS ---------- */
+static nbgl_pageInfoLongPress_t g_approve_page;
+
+/* ---------- FORMATTERS ---------- */
 
 static void format_amount(uint64_t raw) {
-    // 18 decimals
     uint64_t whole = raw / 1000000000000000000ULL;
     uint64_t frac  = raw % 1000000000000000000ULL;
 
-    snprintf(amount_str, sizeof(amount_str),
-             "%llu.%018llu HNY",
+    snprintf(g_amount, sizeof(g_amount),
+             "%llu.%018llu",
              (unsigned long long)whole,
              (unsigned long long)frac);
 }
 
-static void format_address(uint8_t *addr) {
-    snprintf(address_str, sizeof(address_str),
-        "%02X%02X%02X%02X...%02X%02X%02X%02X",
-        addr[0], addr[1], addr[2], addr[3],
-        addr[16], addr[17], addr[18], addr[19]);
+static void format_address(const uint8_t *a) {
+    snprintf(g_addr, sizeof(g_addr),
+        "%02X%02X%02X%02X…%02X%02X%02X%02X",
+        a[0], a[1], a[2], a[3],
+        a[16], a[17], a[18], a[19]);
 }
 
 /* ---------- UI FLOW ---------- */
@@ -39,40 +40,28 @@ void ui_display_tx(void) {
     format_amount(tx->amount);
     format_address(tx->to);
 
-    snprintf(chain_str, sizeof(chain_str), "%lu",
+    snprintf(g_chain, sizeof(g_chain), "%lu",
              (unsigned long)tx->chain_id);
 
-    snprintf(nonce_str, sizeof(nonce_str), "%llu",
-             (unsigned long long)tx->nonce[0]);
+    snprintf(g_nonce, sizeof(g_nonce), "%u",
+             (unsigned)tx->nonce[0]);
 
     nbgl_useCaseReviewStart(
-        "Review Honey Tx",
-        "Verify transaction details",
+        "Honey Tx",
+        "Check details",
         ui_reject_tx
     );
 
-    nbgl_useCaseReviewAddText("Amount", amount_str);
-    nbgl_useCaseReviewAddText("Recipient", address_str);
-    nbgl_useCaseReviewAddText("Chain ID", chain_str);
-    nbgl_useCaseReviewAddText("Nonce", nonce_str);
+    nbgl_useCaseReviewAddText("Amount", g_amount);
+    nbgl_useCaseReviewAddText("To", g_addr);
+    nbgl_useCaseReviewAddText("Chain", g_chain);
+    nbgl_useCaseReviewAddText("Nonce", g_nonce);
 
-    approve_page.text = "Sign transaction";
-    approve_page.longPressText = "Hold to sign";
-    approve_page.longPressCallback = ui_approve_tx;
+    g_approve_page.text = "Sign";
+    g_approve_page.longPressText = "Hold to sign";
+    g_approve_page.longPressCallback = ui_approve_tx;
 
-    nbgl_useCaseReviewEnd(&approve_page);
-}
-
-void ui_show_blind_status(void) {
-    nbgl_useCaseChoice(
-        "Blind signing",
-        "Unknown transaction data",
-        "Proceed with caution",
-        "Continue",
-        ui_approve_tx,
-        "Reject",
-        ui_reject_tx
-    );
+    nbgl_useCaseReviewEnd(&g_approve_page);
 }
 
 void ui_approve_tx(void) {
