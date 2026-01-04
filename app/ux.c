@@ -2,23 +2,54 @@
 #include "ux.h"
 #include "honey.h"
 #include <string.h>
+#include <stdio.h>
 
 bool tx_approved = false;
 honey_tx_t parsed_tx;
 
-// Buffers shown on screen
-static char amount_str[32];
+// Buffers displayed on screen
+static char amount_str[40];
 static char address_str[32];
 
-// Convert uint256 → decimal string (simple display)
+/**
+ * Convert uint256 (big endian) → decimal string with 18 decimals
+ * Safe for Ledger (no floats)
+ */
 static void format_amount(void) {
-    // VERY SIMPLE formatter (review-safe)
-    strcpy(amount_str, "Amount:");
-    strcat(amount_str, " ");
-    strcat(amount_str, "HNY");
+    uint8_t non_zero_found = 0;
+    int out = 0;
+
+    strcpy(amount_str, "HNY ");
+    out = strlen(amount_str);
+
+    // Print integer part
+    for (int i = 0; i < 32; i++) {
+        if (parsed_tx.amount[i] != 0 || non_zero_found || i == 31) {
+            non_zero_found = 1;
+            out += snprintf(
+                amount_str + out,
+                sizeof(amount_str) - out,
+                "%u",
+                parsed_tx.amount[i]
+            );
+        }
+    }
+
+    // Decimal point
+    strcat(amount_str, ".");
+    out = strlen(amount_str);
+
+    // Print 18 decimal places (fixed)
+    for (int i = 0; i < HONEY_DECIMALS; i++) {
+        amount_str[out++] = '0';
+    }
+
+    amount_str[out] = '\0';
 }
 
-// Shorten address for display
+/**
+ * Shortened recipient address
+ */
 static void format_address(void) {
     snprintf(
         address_str,
@@ -31,13 +62,17 @@ static void format_address(void) {
     );
 }
 
+/* =========================
+ * Ledger UX Steps
+ * ========================= */
+
 UX_STEP_NOCB(
     ux_review_step,
     pnn,
     {
         &C_icon_eye,
         "Review",
-        "Transaction"
+        "Honey Tx"
     }
 );
 
