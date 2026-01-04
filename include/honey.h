@@ -25,7 +25,13 @@
  * ================================ */
 
 #define APPNAME "Honey"
-#define APPVERSION "0.3.0"
+#define APPVERSION "0.4.0"
+
+/* ================================
+ * Chain
+ * ================================ */
+
+#define HONEY_CHAIN_ID "honey-mainnet-1"
 
 /* ================================
  * APDU
@@ -51,12 +57,13 @@
 #define HONEY_ADDR_LEN   45
 
 /* ================================
- * Globals
+ * Transaction
  * ================================ */
 
-extern char G_tx_recipient[HONEY_ADDR_LEN];
-extern char G_tx_amount[32];
-extern bool G_tx_approved;
+extern char     G_tx_recipient[HONEY_ADDR_LEN];
+extern char     G_tx_amount[32];
+extern uint32_t G_tx_nonce;
+extern bool     G_tx_approved;
 
 /* ================================
  * Crypto

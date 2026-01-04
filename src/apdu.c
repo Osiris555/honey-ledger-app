@@ -8,6 +8,11 @@
  * Globals
  * ================================ */
 
+char     G_tx_recipient[HONEY_ADDR_LEN];
+char     G_tx_amount[32];
+uint32_t G_tx_nonce;
+bool     G_tx_approved = false;
+
 cx_ecfp_private_key_t G_private_key;
 
 /* ================================
@@ -23,24 +28,24 @@ static void derive_private_key(void) {
         0
     };
 
-    uint8_t private_key_data[32];
+    uint8_t key_data[32];
 
     os_perso_derive_node_bip32(
         CX_CURVE_256K1,
         path,
         5,
-        private_key_data,
+        key_data,
         NULL
     );
 
     cx_ecfp_init_private_key(
         CX_CURVE_256K1,
-        private_key_data,
+        key_data,
         32,
         &G_private_key
     );
 
-    explicit_bzero(private_key_data, sizeof(private_key_data));
+    explicit_bzero(key_data, sizeof(key_data));
 }
 
 /* ================================
@@ -51,27 +56,48 @@ static void sign_transaction(uint8_t *io_buffer, uint16_t *tx) {
     uint8_t hash[32];
     cx_sha256_t sha;
 
-    /* Build hash = SHA256(recipient || amount) */
     cx_sha256_init(&sha);
+
+    /* chain-id */
     cx_hash(
         (cx_hash_t *)&sha,
-        CX_LAST,
+        0,
+        (uint8_t *)HONEY_CHAIN_ID,
+        strlen(HONEY_CHAIN_ID),
+        NULL,
+        0
+    );
+
+    /* recipient */
+    cx_hash(
+        (cx_hash_t *)&sha,
+        0,
         (uint8_t *)G_tx_recipient,
         strlen(G_tx_recipient),
-        hash,
-        sizeof(hash)
+        NULL,
+        0
     );
 
+    /* amount */
+    cx_hash(
+        (cx_hash_t *)&sha,
+        0,
+        (uint8_t *)G_tx_amount,
+        strlen(G_tx_amount),
+        NULL,
+        0
+    );
+
+    /* nonce */
     cx_hash(
         (cx_hash_t *)&sha,
         CX_LAST,
-        (uint8_t *)G_tx_amount,
-        strlen(G_tx_amount),
+        (uint8_t *)&G_tx_nonce,
+        sizeof(G_tx_nonce),
         hash,
         sizeof(hash)
     );
 
-    /* Sign */
     derive_private_key();
 
     uint32_t sig_len = 0;
@@ -94,24 +120,29 @@ static void sign_transaction(uint8_t *io_buffer, uint16_t *tx) {
 }
 
 /* ================================
- * APDU handler
+ * APDU
  * ================================ */
 
 static void handle_sign_tx(uint8_t *io_buffer, uint16_t *tx) {
     uint8_t offset = 5;
 
-    /* Recipient */
+    /* recipient */
     uint8_t rlen = io_buffer[offset++];
     memcpy(G_tx_recipient, &io_buffer[offset], rlen);
     G_tx_recipient[rlen] = 0;
     offset += rlen;
 
-    /* Amount */
+    /* amount */
     uint8_t alen = io_buffer[offset++];
     memcpy(G_tx_amount, &io_buffer[offset], alen);
     G_tx_amount[alen] = 0;
+    offset += alen;
+
+    /* nonce */
+    memcpy(&G_tx_nonce, &io_buffer[offset], sizeof(uint32_t));
 
     /* UI */
+    G_tx_approved = false;
     ui_confirm_transaction();
     while (!G_tx_approved) {
         ux_step();
