@@ -18,6 +18,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "cx.h"
 
 #define HONEY_DECIMALS 18
 
@@ -27,13 +28,21 @@
 
 typedef struct {
     uint8_t recipient[20];
-    uint8_t amount[32]; // uint256, big-endian
+    uint8_t amount[32]; // uint256 big-endian
 } honey_tx_t;
 
 extern honey_tx_t parsed_tx;
 extern bool tx_approved;
 
-// UX entry point
+// Signing outputs
+extern uint8_t tx_hash[32];
+extern uint8_t signature[72];
+extern uint16_t signature_len;
+
+// UX
 void ux_confirm_transaction(void);
+
+// Crypto
+void sign_transaction(void);
 
 #endif
