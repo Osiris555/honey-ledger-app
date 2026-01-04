@@ -1,69 +1,52 @@
 #include "tx.h"
-#include "cx.h"
-#include "os.h"
-
 #include <string.h>
 
-/* ---------- VALIDATION ---------- */
+/*
+ * Serialized format:
+ *
+ * [ DOMAIN TAG ]
+ * [ amount (8) ]
+ * [ fee    (8) ]
+ * [ nonce  (4) ]
+ * [ to     (20) ]
+ *
+ * This ensures signatures are bound to:
+ * - Honey
+ * - Transaction intent
+ * - Protocol version
+ */
 
-int honey_tx_validate(const honey_tx_t *tx) {
+size_t honey_tx_serialize(
+    const honey_tx_t *tx,
+    uint8_t *out,
+    size_t out_len
+) {
+    size_t offset = 0;
+    size_t domain_len = strlen(HONEY_DOMAIN_TAG);
 
-    if (tx == NULL)
+    if (out_len < domain_len + 8 + 8 + 4 + 20) {
         return 0;
-
-    if (tx->version != HONEY_TX_VERSION)
-        return 0;
-
-    if (tx->memo_len > HONEY_TX_MAX_MEMO_LEN)
-        return 0;
-
-    if (tx->amount == 0)
-        return 0;
-
-    if (tx->fee == 0)
-        return 0;
-
-    // Prevent overflow: amount + fee must not wrap
-    if (tx->amount + tx->fee < tx->amount)
-        return 0;
-
-    // Prevent sending to zero address
-    int zero = 1;
-    for (int i = 0; i < 20; i++) {
-        if (tx->to[i] != 0) {
-            zero = 0;
-            break;
-        }
     }
 
-    if (zero)
-        return 0;
+    /* Domain separation */
+    memcpy(out + offset, HONEY_DOMAIN_TAG, domain_len);
+    offset += domain_len;
 
-    return 1;
-}
+    /* Amount */
+    memcpy(out + offset, &tx->amount, sizeof(tx->amount));
+    offset += sizeof(tx->amount);
 
-/* ---------- HASHING ---------- */
+    /* Fee */
+    memcpy(out + offset, &tx->fee, sizeof(tx->fee));
+    offset += sizeof(tx->fee);
 
-void honey_tx_hash(const honey_tx_t *tx, uint8_t out[32]) {
+    /* Nonce */
+    memcpy(out + offset, &tx->nonce, sizeof(tx->nonce));
+    offset += sizeof(tx->nonce);
 
-    cx_sha256_t ctx;
-    cx_sha256_init(&ctx);
+    /* Destination */
+    memcpy(out + offset, tx->to, sizeof(tx->to));
+    offset += sizeof(tx->to);
 
-    cx_hash(
-        (cx_hash_t *)&ctx,
-        0,
-        (uint8_t *)tx,
-        sizeof(honey_tx_t),
-        NULL,
-        0
-    );
-
-    cx_hash(
-        (cx_hash_t *)&ctx,
-        CX_LAST,
-        NULL,
-        0,
-        out,
-        32
-    );
+    return offset;
 }
