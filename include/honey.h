@@ -18,7 +18,10 @@
 #include <stdbool.h>
 
 #define HONEY_CLA 0xE0
-#define INS_SIGN_TX 0x01
+
+#define INS_SIGN_TX        0x01
+#define INS_GET_SETTINGS   0x02
+#define INS_SET_BLIND      0x03
 
 #define MAX_TX_BUFFER 128
 
@@ -29,17 +32,20 @@ typedef struct {
     uint8_t  nonce[8];
 } honey_tx_t;
 
-// Global transaction context
 typedef struct {
     honey_tx_t tx;
-    uint8_t raw[MAX_TX_BUFFER];
-    uint32_t raw_len;
     bool ready;
 } honey_ctx_t;
 
-extern honey_ctx_t G_honey_ctx;
+typedef struct {
+    bool blind_signing_enabled;
+} honey_settings_t;
 
-// UI helpers
+extern honey_ctx_t G_honey_ctx;
+extern honey_settings_t G_honey_settings;
+
+// UI
 void ui_display_tx(void);
 void ui_approve_tx(void);
 void ui_reject_tx(void);
+void ui_show_blind_status(void);
