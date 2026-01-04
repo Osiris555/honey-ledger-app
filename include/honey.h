@@ -20,14 +20,14 @@
 #include <stdbool.h>
 
 /* ================================
- * App constants
+ * App metadata
  * ================================ */
 
 #define APPNAME "Honey"
-#define APPVERSION "0.1.0"
+#define APPVERSION "0.2.0"
 
 /* ================================
- * APDU Instructions
+ * APDU
  * ================================ */
 
 #define CLA_HONEY        0xE0
@@ -36,17 +36,25 @@
 #define INS_SIGN_TX      0x03
 
 /* ================================
- * Address format
+ * Token constants
+ * ================================ */
+
+#define HONEY_DECIMALS   18
+#define HONEY_TICKER     "HNY"
+
+/* ================================
+ * Address
  * ================================ */
 
 #define HONEY_HRP        "hny"
-#define HONEY_ADDR_LEN   45   // typical bech32 length
+#define HONEY_ADDR_LEN   45
 
 /* ================================
- * Global buffers
+ * Globals (UI)
  * ================================ */
 
-extern char G_honey_address[HONEY_ADDR_LEN];
-extern bool G_address_approved;
+extern char G_tx_recipient[HONEY_ADDR_LEN];
+extern char G_tx_amount[32];
+extern bool G_tx_approved;
 
 #endif
