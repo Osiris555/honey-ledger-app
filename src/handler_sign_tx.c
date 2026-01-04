@@ -1,6 +1,9 @@
 #include "handler_sign_tx.h"
 #include "ui.h"
 
+#include "os.h"
+#include "cx.h"
+
 #include <string.h>
 #include <stdio.h>
 
@@ -10,15 +13,39 @@
 
 static tx_context_t tx_ctx;
 
-/*
-FINAL TX FORMAT (after reassembly):
-[0..19]  recipient address (ASCII)
-[20..27] uint64 amount (18 decimals, BE)
-*/
+static uint8_t tx_hash[32];
+static uint8_t signature[72];
+static uint32_t signature_len;
 
-static bool validate_amount(uint64_t amount) {
-    if (amount == 0) return false;
-    return true;
+static cx_ecfp_private_key_t private_key;
+
+static void hash_transaction(void) {
+    cx_hash_sha256(tx_ctx.buffer, tx_ctx.length, tx_hash, 32);
+}
+
+void sign_transaction(void) {
+    hash_transaction();
+
+    os_derive_bip32(
+        CX_CURVE_256K1,
+        (uint32_t[]){44 | 0x80000000, 999 | 0x80000000, 0x80000000, 0, 0},
+        5,
+        (uint8_t *)&private_key,
+        NULL
+    );
+
+    cx_ecdsa_sign(
+        &private_key,
+        CX_RND_RFC6979 | CX_LAST,
+        CX_SHA256,
+        tx_hash,
+        32,
+        signature,
+        &signature_len,
+        NULL
+    );
+
+    explicit_bzero(&private_key, sizeof(private_key));
 }
 
 void handle_sign_tx_chunk(uint8_t p1, uint8_t *data, uint16_t len) {
@@ -43,8 +70,6 @@ void handle_sign_tx_chunk(uint8_t p1, uint8_t *data, uint16_t len) {
         return;
     }
 
-    /* ----- FINAL CHUNK RECEIVED ----- */
-
     if (tx_ctx.length != 28) {
         tx_ctx.active = false;
         return;
@@ -60,14 +85,9 @@ void handle_sign_tx_chunk(uint8_t p1, uint8_t *data, uint16_t len) {
         amount = (amount << 8) | tx_ctx.buffer[i];
     }
 
-    if (!validate_amount(amount)) {
-        tx_ctx.active = false;
-        return;
-    }
-
     uint64_t divisor = 1000000000000000000ULL;
-    uint64_t whole   = amount / divisor;
-    uint64_t frac    = amount % divisor;
+    uint64_t whole = amount / divisor;
+    uint64_t frac = amount % divisor;
 
     snprintf(
         amount_str,

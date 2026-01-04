@@ -12,3 +12,4 @@ typedef struct {
 } tx_context_t;
 
 void handle_sign_tx_chunk(uint8_t p1, uint8_t *data, uint16_t len);
+void sign_transaction(void);
