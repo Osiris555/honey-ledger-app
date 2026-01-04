@@ -13,22 +13,40 @@
  * This model is fixed and protocol-level.
  */
 
-#pragma once
+#ifndef HONEY_H
+#define HONEY_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
-/*
- * HONEY Monetary Units
- *
- * Base unit: CONE
- * 1 HONEY (HNY) = 10^18 CONES
- *
- * Ledger UI displays HONEY
- * Ledger signing uses CONES (uint64 / big-int)
- */
+/* ================================
+ * App constants
+ * ================================ */
 
-#define HNY_DECIMALS 18
-#define CONES_PER_HNY 1000000000000000000ULL
+#define APPNAME "Honey"
+#define APPVERSION "0.1.0"
 
-// Formatting helpers
-void format_hny_amount(uint64_t amount_cones, char *out, uint32_t out_len);
+/* ================================
+ * APDU Instructions
+ * ================================ */
+
+#define CLA_HONEY        0xE0
+#define INS_GET_VERSION  0x01
+#define INS_GET_ADDRESS  0x02
+#define INS_SIGN_TX      0x03
+
+/* ================================
+ * Address format
+ * ================================ */
+
+#define HONEY_HRP        "hny"
+#define HONEY_ADDR_LEN   45   // typical bech32 length
+
+/* ================================
+ * Global buffers
+ * ================================ */
+
+extern char G_honey_address[HONEY_ADDR_LEN];
+extern bool G_address_approved;
+
+#endif

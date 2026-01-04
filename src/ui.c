@@ -1,120 +1,85 @@
-#include "format.h"
 #include "os.h"
 #include "ux.h"
-#include "ui.h"
-#include <stdio.h>
+#include "honey.h"
 #include <string.h>
 
-static ux_step_t ux_steps[6];
-static ux_flow_t ux_flow;
+/* ================================
+ * Globals
+ * ================================ */
 
-static char recipient_text[64];
-static char amount_text[32];
-static char fee_text[32];
-static bool approved = false;
+char G_honey_address[HONEY_ADDR_LEN];
+bool G_address_approved = false;
 
-/* ---------- UI STEPS ---------- */
+/* ================================
+ * UI Callbacks
+ * ================================ */
+
+static void ui_confirm_address_ok(void) {
+    G_address_approved = true;
+    ux_flow_exit();
+}
+
+static void ui_confirm_address_cancel(void) {
+    G_address_approved = false;
+    ux_flow_exit();
+}
+
+/* ================================
+ * Address confirmation flow
+ * ================================ */
 
 UX_STEP_NOCB(
-    ux_review_step,
+    ux_address_title_step,
     pnn,
     {
         &C_icon_eye,
-        "Review",
-        "Transaction"
+        "Confirm",
+        "Address",
     }
 );
 
 UX_STEP_NOCB(
-    ux_recipient_step,
+    ux_address_value_step,
     bnnn_paging,
     {
-        "Recipient",
-        recipient_text
-    }
-);
-
-UX_STEP_NOCB(
-    ux_amount_step,
-    bnnn_paging,
-    {
-        "Amount",
-        amount_text
-    }
-);
-
-UX_STEP_NOCB(
-    ux_fee_step,
-    bnnn_paging,
-    {
-        "Fee",
-        fee_text
+        .title = "Honey",
+        .text = G_honey_address,
     }
 );
 
 UX_STEP_CB(
-    ux_approve_step,
-    pbb,
+    ux_address_confirm_step,
+    pb,
+    ui_confirm_address_ok(),
     {
         &C_icon_validate_14,
         "Approve",
-        "transaction",
-    },
-    {
-        approved = true;
-        ux_flow_exit();
     }
 );
 
 UX_STEP_CB(
-    ux_reject_step,
-    pbb,
+    ux_address_reject_step,
+    pb,
+    ui_confirm_address_cancel(),
     {
         &C_icon_crossmark,
         "Reject",
-        "transaction",
-    },
-    {
-        approved = false;
-        ux_flow_exit();
     }
 );
 
-/* ---------- FLOW ---------- */
+UX_FLOW(
+    ux_confirm_address_flow,
+    &ux_address_title_step,
+    &ux_address_value_step,
+    &ux_address_confirm_step,
+    &ux_address_reject_step
+);
 
-void ui_sign_tx_start(
-    const char *recipient_raw,
-    uint64_t amount,
-    uint64_t fee
-) {
-    format_address(
-        (const uint8_t *)recipient_raw,
-        recipient_text,
-        sizeof(recipient_text)
-    );
+/* ================================
+ * Public entry point
+ * ================================ */
 
-    format_hny_amount(
-        amount,
-        amount_text,
-        sizeof(amount_text)
-    );
-
-    format_hny_amount(
-        fee,
-        fee_text,
-        sizeof(fee_text)
-    );
-
-    approved = false;
-
-    ux_flow_init(
-        0,
-        &ux_flow,
-        ux_steps,
-        ARRAYLEN(ux_steps)
-    );
-}
-
-bool ui_sign_tx_approved(void) {
-    return approved;
+void ui_display_address(void) {
+    G_address_approved = false;
+    ux_flow_init(0, ux_confirm_address_flow, NULL);
 }
