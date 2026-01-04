@@ -24,8 +24,8 @@
  * App
  * ================================ */
 
-#define APPNAME "Honey"
-#define APPVERSION "0.4.0"
+#define APPNAME        "Honey"
+#define APPVERSION     "0.5.0"
 
 /* ================================
  * Chain
@@ -70,5 +70,6 @@ extern bool     G_tx_approved;
  * ================================ */
 
 extern cx_ecfp_private_key_t G_private_key;
+extern cx_ecfp_public_key_t  G_public_key;
 
 #endif
