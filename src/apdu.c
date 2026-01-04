@@ -1,52 +1,61 @@
 #include "apdu.h"
-#include "constants.h"
+#include "os_io_seproxyhal.h"
+#include <string.h>
 
-void handle_apdu(
-    uint8_t cla,
-    uint8_t ins,
-    uint8_t p1,
-    uint8_t p2,
-    uint8_t lc,
-    const uint8_t *data,
-    uint8_t *tx,
-    size_t *tx_len,
-    uint16_t *sw
-) {
-    (void)p1;
-    (void)p2;
-    (void)data;
+/* CLA */
+#define HONEY_CLA 0xE0
 
-    *tx_len = 0;
+/* INS codes */
+#define INS_GET_APP_VERSION 0x01
+#define INS_GET_APP_NAME    0x02
 
-    if (cla != CLA_HONEY) {
-        *sw = SW_CLA_NOT_SUPPORTED;
+/* App metadata */
+#define APP_NAME    "Honey Ledger"
+#define APP_VERSION "0.2.0"
+
+/* Global APDU buffer */
+extern unsigned char G_io_apdu_buffer[IO_APDU_BUFFER_SIZE];
+
+/* Handle APDU */
+void handle_apdu(uint8_t *apdu_buffer, uint16_t apdu_length) {
+    uint8_t cla = apdu_buffer[OFFSET_CLA];
+    uint8_t ins = apdu_buffer[OFFSET_INS];
+
+    /* Enforce correct CLA */
+    if (cla != HONEY_CLA) {
+        G_io_apdu_buffer[0] = 0x6E;
+        G_io_apdu_buffer[1] = 0x00;
+        io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 2);
         return;
     }
 
     switch (ins) {
 
-    case INS_GET_VERSION:
-        // version: MAJOR.MINOR.PATCH
-        tx[0] = 0x01; // major
-        tx[1] = 0x00; // minor
-        tx[2] = 0x00; // patch
-        *tx_len = 3;
-        *sw = SW_OK;
-        break;
-
-    case INS_PING:
-        if (lc != 0) {
-            *sw = SW_WRONG_LENGTH;
-            return;
+        /* GET_APP_VERSION */
+        case INS_GET_APP_VERSION: {
+            size_t len = strlen(APP_VERSION);
+            memcpy(G_io_apdu_buffer, APP_VERSION, len);
+            G_io_apdu_buffer[len]     = 0x90;
+            G_io_apdu_buffer[len + 1] = 0x00;
+            io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, len + 2);
+            break;
         }
-        tx[0] = 0xAA;
-        tx[1] = 0x55;
-        *tx_len = 2;
-        *sw = SW_OK;
-        break;
 
-    default:
-        *sw = SW_INS_NOT_SUPPORTED;
-        break;
+        /* GET_APP_NAME */
+        case INS_GET_APP_NAME: {
+            size_t len = strlen(APP_NAME);
+            memcpy(G_io_apdu_buffer, APP_NAME, len);
+            G_io_apdu_buffer[len]     = 0x90;
+            G_io_apdu_buffer[len + 1] = 0x00;
+            io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, len + 2);
+            break;
+        }
+
+        /* Unknown INS */
+        default:
+            G_io_apdu_buffer[0] = 0x6D;
+            G_io_apdu_buffer[1] = 0x00;
+            io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 2);
+            break;
     }
 }
