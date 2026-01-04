@@ -20,6 +20,7 @@
 #define CLA_HONEY              0xE0
 
 #define INS_GET_PUBLIC_KEY     0x02
+#define INS_GET_ADDRESS        0x03
 #define INS_SIGN_TX            0x04
 
 #define SW_OK                  0x9000
@@ -27,8 +28,8 @@
 #define SW_WRONG_LENGTH        0x6700
 
 #define PUBKEY_LEN             65
+#define HONEY_ADDR_LEN         43
 
-// BIP32 path: m/44'/118'/0'/0/0
 #define HONEY_BIP32_PATH_LEN 5
 
 static const uint32_t HONEY_BIP32_PATH[HONEY_BIP32_PATH_LEN] = {

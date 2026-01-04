@@ -7,11 +7,29 @@
 #include "ui.h"
 
 #include <string.h>
+#include <stdio.h>
 
 unsigned char G_io_apdu_buffer[IO_APDU_BUFFER_SIZE];
 
 static cx_ecfp_private_key_t private_key;
 static cx_ecfp_public_key_t public_key;
+static char honey_address[HONEY_ADDR_LEN + 1];
+
+/* ---------- ADDRESS DERIVATION ---------- */
+
+static void derive_address(void) {
+    uint8_t hash[32];
+
+    cx_hash_sha256(public_key.W, PUBKEY_LEN, hash, sizeof(hash));
+
+    os_strcpy(honey_address, "hny1");
+
+    for (int i = 0; i < 20; i++) {
+        sprintf(honey_address + 4 + (i * 2), "%02x", hash[i]);
+    }
+
+    honey_address[HONEY_ADDR_LEN] = 0;
+}
 
 /* ---------- BIP32 KEY DERIVATION ---------- */
 
@@ -43,6 +61,8 @@ static void derive_keypair(void) {
 
     explicit_bzero(private_key_data, sizeof(private_key_data));
     explicit_bzero(chain_code, sizeof(chain_code));
+
+    derive_address();
 }
 
 /* ---------- APDU HANDLERS ---------- */
@@ -52,6 +72,12 @@ static void handle_get_public_key(uint16_t *tx) {
     *tx = PUBKEY_LEN;
 }
 
+static void handle_get_address(uint16_t *tx) {
+    ui_show_address(honey_address);
+    memcpy(G_io_apdu_buffer, honey_address, HONEY_ADDR_LEN);
+    *tx = HONEY_ADDR_LEN;
+}
+
 static void handle_sign_tx(uint16_t rx, uint16_t *tx) {
     if (rx < sizeof(honey_tx_t))
         THROW(SW_WRONG_LENGTH);
@@ -59,7 +85,6 @@ static void handle_sign_tx(uint16_t rx, uint16_t *tx) {
     honey_tx_t tx_obj;
     memcpy(&tx_obj, G_io_apdu_buffer + 5, sizeof(honey_tx_t));
 
-    // 🔐 USER CONFIRMATION
     ui_confirm_tx(&tx_obj);
 
     uint8_t hash[32];
@@ -87,6 +112,10 @@ static void handle_apdu(uint8_t ins, uint16_t rx, uint16_t *tx) {
 
         case INS_GET_PUBLIC_KEY:
             handle_get_public_key(tx);
+            break;
+
+        case INS_GET_ADDRESS:
+            handle_get_address(tx);
             break;
 
         case INS_SIGN_TX:
