@@ -3,55 +3,68 @@
 
 #include <string.h>
 #include <stdio.h>
-#include <stdbool.h>
+
+#define P1_FIRST 0x00
+#define P1_MORE  0x01
+#define P1_LAST  0x02
+
+static tx_context_t tx_ctx;
 
 /*
-APDU DATA FORMAT:
+FINAL TX FORMAT (after reassembly):
 [0..19]  recipient address (ASCII)
-[20..27] uint64 amount (big-endian, 18 decimals)
+[20..27] uint64 amount (18 decimals, BE)
 */
 
-#define HONEY_DECIMALS 18
-#define MAX_AMOUNT  ((uint64_t)-1)
-
-/* ---------- VALIDATION ---------- */
-
 static bool validate_amount(uint64_t amount) {
-    if (amount == 0) {
-        return false;
-    }
-    if (amount > MAX_AMOUNT) {
-        return false;
-    }
+    if (amount == 0) return false;
     return true;
 }
 
-/* ---------- HANDLER ---------- */
-
-void handle_sign_tx(uint8_t *data, uint16_t len) {
-    if (len != 28) {
-        return; // malformed APDU
+void handle_sign_tx_chunk(uint8_t p1, uint8_t *data, uint16_t len) {
+    if (p1 == P1_FIRST) {
+        memset(&tx_ctx, 0, sizeof(tx_ctx));
+        tx_ctx.active = true;
     }
 
-    char address[65] = {0};
-    char amount_str[32] = {0};
-
-    /* Parse address */
-    memcpy(address, data, 20);
-    address[20] = '\0';
-
-    /* Parse amount (uint64 BE) */
-    uint64_t amount = 0;
-    for (int i = 20; i < 28; i++) {
-        amount = (amount << 8) | data[i];
-    }
-
-    /* Validate amount */
-    if (!validate_amount(amount)) {
+    if (!tx_ctx.active) {
         return;
     }
 
-    /* Convert to decimal string (18 decimals enforced) */
+    if (tx_ctx.length + len > MAX_TX_SIZE) {
+        tx_ctx.active = false;
+        return;
+    }
+
+    memcpy(tx_ctx.buffer + tx_ctx.length, data, len);
+    tx_ctx.length += len;
+
+    if (p1 != P1_LAST) {
+        return;
+    }
+
+    /* ----- FINAL CHUNK RECEIVED ----- */
+
+    if (tx_ctx.length != 28) {
+        tx_ctx.active = false;
+        return;
+    }
+
+    char address[21] = {0};
+    char amount_str[32] = {0};
+
+    memcpy(address, tx_ctx.buffer, 20);
+
+    uint64_t amount = 0;
+    for (int i = 20; i < 28; i++) {
+        amount = (amount << 8) | tx_ctx.buffer[i];
+    }
+
+    if (!validate_amount(amount)) {
+        tx_ctx.active = false;
+        return;
+    }
+
     uint64_t divisor = 1000000000000000000ULL;
     uint64_t whole   = amount / divisor;
     uint64_t frac    = amount % divisor;
@@ -66,4 +79,6 @@ void handle_sign_tx(uint8_t *data, uint16_t len) {
 
     ui_init();
     ui_display_tx(address, amount_str);
+
+    tx_ctx.active = false;
 }
