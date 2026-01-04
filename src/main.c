@@ -1,3 +1,4 @@
+#include "ui.h"
 #include "os.h"
 #include "cx.h"
 #include "ux.h"
@@ -56,6 +57,7 @@ void app_main(void) {
 
 __attribute__((noreturn))
 void main(void) {
+    UX_INIT();
     os_boot();
     app_main();
 }
