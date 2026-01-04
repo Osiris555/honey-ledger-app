@@ -1,3 +1,4 @@
+#include "format.h"
 #include "os.h"
 #include "ux.h"
 #include "ui.h"
@@ -82,15 +83,27 @@ UX_STEP_CB(
 /* ---------- FLOW ---------- */
 
 void ui_sign_tx_start(
-    const char *recipient,
+    const char *recipient_raw,
     uint64_t amount,
     uint64_t fee
 ) {
-    snprintf(amount_text, sizeof(amount_text), "%llu HNY", amount);
-    snprintf(fee_text, sizeof(fee_text), "%llu HNY", fee);
+    format_address(
+        (const uint8_t *)recipient_raw,
+        recipient_text,
+        sizeof(recipient_text)
+    );
 
-    strncpy(recipient_text, recipient, sizeof(recipient_text) - 1);
-    recipient_text[sizeof(recipient_text) - 1] = '\0';
+    format_hny_amount(
+        amount,
+        amount_text,
+        sizeof(amount_text)
+    );
+
+    format_hny_amount(
+        fee,
+        fee_text,
+        sizeof(fee_text)
+    );
 
     approved = false;
 
