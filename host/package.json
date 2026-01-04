@@ -1,0 +1,9 @@
+{
+  "name": "honey-ledger-host",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@ledgerhq/hw-transport-node-hid": "^6.28.6"
+  }
+}
