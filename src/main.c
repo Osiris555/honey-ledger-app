@@ -1,36 +1,46 @@
-#include "ui.h"
 #include "os.h"
 #include "cx.h"
+#include "honey.h"
 #include "ux.h"
-#include "os_io_seproxyhal.h"
 
-#define CLA_HONEY 0xE0
-#define INS_GET_VERSION 0x01
+static honey_tx_t current_tx;
 
-static uint8_t G_io_apdu_buffer[IO_APDU_BUFFER_SIZE];
-
-void handle_get_version(void) {
-    G_io_apdu_buffer[0] = 0x01; // major
-    G_io_apdu_buffer[1] = 0x00; // minor
-    G_io_apdu_buffer[2] = 0x00; // patch
-    io_send_response_buffers(G_io_apdu_buffer, 3, SW_OK);
-}
-
-void handle_apdu(uint8_t cla, uint8_t ins) {
-    if (cla != CLA_HONEY) {
-        THROW(SW_CLA_NOT_SUPPORTED);
+static void handle_sign_tx(uint8_t *data, uint16_t length) {
+    if (length == 0 || length > MAX_TX_SIZE) {
+        THROW(SW_WRONG_LENGTH);
     }
 
-    switch (ins) {
-        case INS_GET_VERSION:
-            handle_get_version();
-            break;
-        default:
-            THROW(SW_INS_NOT_SUPPORTED);
+    os_memmove(current_tx.data, data, length);
+    current_tx.length = length;
+
+    ux_confirm_transaction();
+
+    if (!tx_approved) {
+        THROW(SW_CONDITIONS_NOT_SATISFIED);
     }
+
+    cx_ecfp_private_key_t priv;
+    uint8_t sig[SIG_LEN];
+
+    // NOTE: Placeholder key derivation (replace with BIP32 later)
+    cx_ecfp_init_private_key(CX_CURVE_256K1, (uint8_t *)"dummykeydummykeydummykeydummy!", 32, &priv);
+
+    cx_ecdsa_sign(
+        &priv,
+        CX_RND_RFC6979 | CX_LAST,
+        CX_SHA256,
+        current_tx.data,
+        current_tx.length,
+        sig,
+        SIG_LEN,
+        NULL
+    );
+
+    G_io_apdu_buffer[0] = SIG_LEN;
+    os_memmove(G_io_apdu_buffer + 1, sig, SIG_LEN);
+    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, SIG_LEN + 1);
 }
 
-__attribute__((noreturn))
 void app_main(void) {
     for (;;) {
         unsigned int rx = io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 0);
@@ -39,25 +49,16 @@ void app_main(void) {
         uint8_t cla = G_io_apdu_buffer[0];
         uint8_t ins = G_io_apdu_buffer[1];
 
-        BEGIN_TRY {
-            TRY {
-                handle_apdu(cla, ins);
-            }
-            CATCH_OTHER(e) {
-                G_io_apdu_buffer[0] = (e >> 8) & 0xFF;
-                G_io_apdu_buffer[1] = e & 0xFF;
-                io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 2);
-            }
-            FINALLY {
-            }
+        if (cla != HONEY_CLA) {
+            THROW(SW_INS_NOT_SUPPORTED);
         }
-        END_TRY;
-    }
-}
 
-__attribute__((noreturn))
-void main(void) {
-    UX_INIT();
-    os_boot();
-    app_main();
+        switch (ins) {
+            case INS_SIGN_TX:
+                handle_sign_tx(G_io_apdu_buffer + 5, rx - 5);
+                break;
+            default:
+                THROW(SW_INS_NOT_SUPPORTED);
+        }
+    }
 }

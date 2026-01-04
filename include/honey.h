@@ -13,63 +13,35 @@
  * This model is fixed and protocol-level.
  */
 
-#ifndef HONEY_H
-#define HONEY_H
+#pragma once
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "cx.h"
 
-/* ================================
- * App
- * ================================ */
+#define HONEY_CLA  0xE0
 
-#define APPNAME        "Honey"
-#define APPVERSION     "0.5.0"
+// Instruction codes
+#define INS_GET_VERSION   0x01
+#define INS_GET_PUBKEY    0x02
+#define INS_SIGN_TX       0x04
 
-/* ================================
- * Chain
- * ================================ */
+// Status words
+#define SW_OK             0x9000
+#define SW_INS_NOT_SUPPORTED 0x6D00
+#define SW_WRONG_LENGTH   0x6700
+#define SW_SECURITY_STATUS_NOT_SATISFIED 0x6982
+#define SW_CONDITIONS_NOT_SATISFIED 0x6985
+#define SW_WRONG_DATA     0x6A80
 
-#define HONEY_CHAIN_ID "honey-mainnet-1"
+// Limits (HARDENING)
+#define MAX_TX_SIZE 256
+#define PUBKEY_LEN  32
+#define SIG_LEN     64
 
-/* ================================
- * APDU
- * ================================ */
+typedef struct {
+    uint8_t data[MAX_TX_SIZE];
+    uint16_t length;
+} honey_tx_t;
 
-#define CLA_HONEY        0xE0
-#define INS_GET_VERSION  0x01
-#define INS_GET_ADDRESS  0x02
-#define INS_SIGN_TX      0x03
-
-/* ================================
- * Token
- * ================================ */
-
-#define HONEY_DECIMALS   18
-#define HONEY_TICKER     "HNY"
-
-/* ================================
- * Address
- * ================================ */
-
-#define HONEY_HRP        "hny"
-#define HONEY_ADDR_LEN   45
-
-/* ================================
- * Transaction
- * ================================ */
-
-extern char     G_tx_recipient[HONEY_ADDR_LEN];
-extern char     G_tx_amount[32];
-extern uint32_t G_tx_nonce;
-extern bool     G_tx_approved;
-
-/* ================================
- * Crypto
- * ================================ */
-
-extern cx_ecfp_private_key_t G_private_key;
-extern cx_ecfp_public_key_t  G_public_key;
-
-#endif
+// Global approval flag
+extern bool tx_approved;
