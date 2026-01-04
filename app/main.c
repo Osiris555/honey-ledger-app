@@ -1,7 +1,9 @@
 #include "os.h"
 #include "cx.h"
-#include "honey.h"
 #include "ux.h"
+
+#include "honey.h"
+#include "tx.h"
 
 #include <string.h>
 
@@ -10,7 +12,6 @@ unsigned char G_io_apdu_buffer[IO_APDU_BUFFER_SIZE];
 static cx_ecfp_private_key_t private_key;
 static cx_ecfp_public_key_t public_key;
 
-/* Generate deterministic key once */
 static void generate_keypair(void) {
     cx_ecfp_generate_pair(
         CX_CURVE_256K1,
@@ -20,34 +21,47 @@ static void generate_keypair(void) {
     );
 }
 
-/* Derive Honey address = RIPEMD160(SHA256(pubkey)) */
-static void derive_address(uint8_t *out, const uint8_t *pubkey) {
-    uint8_t sha256[32];
-    cx_hash_sha256(pubkey, PUBKEY_LEN, sha256, 32);
-    cx_ripemd160(sha256, 32, out, ADDRESS_LEN);
-}
-
 static void handle_get_public_key(uint16_t *tx) {
-    uint8_t address[ADDRESS_LEN];
-
-    derive_address(address, public_key.W);
-
-    uint8_t offset = 0;
-
-    memcpy(G_io_apdu_buffer + offset, public_key.W, PUBKEY_LEN);
-    offset += PUBKEY_LEN;
-
-    memcpy(G_io_apdu_buffer + offset, address, ADDRESS_LEN);
-    offset += ADDRESS_LEN;
-
-    *tx = offset;
+    memcpy(G_io_apdu_buffer, public_key.W, PUBKEY_LEN);
+    *tx = PUBKEY_LEN;
 }
 
-static void handle_apdu(uint8_t ins, uint16_t *tx) {
+static void handle_sign_tx(uint16_t rx, uint16_t *tx) {
+    if (rx < sizeof(honey_tx_t))
+        THROW(SW_WRONG_LENGTH);
+
+    honey_tx_t tx_obj;
+    memcpy(&tx_obj, G_io_apdu_buffer + 5, sizeof(honey_tx_t));
+
+    uint8_t hash[32];
+    honey_tx_hash(&tx_obj, hash);
+
+    uint8_t sig[72];
+    unsigned int sig_len = sizeof(sig);
+
+    cx_ecdsa_sign(
+        &private_key,
+        CX_RND_RFC6979 | CX_LAST,
+        CX_SHA256,
+        hash,
+        32,
+        sig,
+        &sig_len
+    );
+
+    memcpy(G_io_apdu_buffer, sig, sig_len);
+    *tx = sig_len;
+}
+
+static void handle_apdu(uint8_t ins, uint16_t rx, uint16_t *tx) {
     switch (ins) {
 
         case INS_GET_PUBLIC_KEY:
             handle_get_public_key(tx);
+            break;
+
+        case INS_SIGN_TX:
+            handle_sign_tx(rx, tx);
             break;
 
         default:
@@ -72,7 +86,7 @@ void app_main(void) {
 
         BEGIN_TRY {
             TRY {
-                handle_apdu(ins, &tx);
+                handle_apdu(ins, rx, &tx);
                 G_io_apdu_buffer[tx++] = 0x90;
                 G_io_apdu_buffer[tx++] = 0x00;
             }
