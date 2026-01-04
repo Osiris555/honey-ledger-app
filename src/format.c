@@ -1,50 +1,35 @@
-#include "format.h"
 #include <stdio.h>
-#include <string.h>
+#include <stdint.h>
+#include "honey.h"
 
-#define HNY_DECIMALS 6
+/*
+ * Format HONEY amounts for Ledger UI
+ *
+ * - Input is always CONES (smallest unit)
+ * - Signing uses full precision
+ * - UI displays up to 6 decimals for readability
+ *
+ * Example:
+ *   1234567000000000000 CONES
+ *   → "1.234567 HNY"
+ */
 
 void format_hny_amount(
-    uint64_t value,
+    uint64_t amount_cones,
     char *out,
     uint32_t out_len
 ) {
-    uint64_t integer = value;
-    uint64_t fraction = 0;
+    uint64_t whole = amount_cones / CONES_PER_HNY;
 
-    for (int i = 0; i < HNY_DECIMALS; i++) {
-        fraction = integer % 10;
-        integer /= 10;
-    }
-
-    uint64_t frac_part = value % 1000000;
-    uint64_t int_part  = value / 1000000;
+    // Show only first 6 decimals (Ledger best practice)
+    uint64_t fractional =
+        (amount_cones / 1000000000000ULL) % 1000000ULL;
 
     snprintf(
         out,
         out_len,
         "%llu.%06llu HNY",
-        int_part,
-        frac_part
-    );
-}
-
-/*
- * Displays:
- * hny1abcd…1234
- */
-void format_address(
-    const uint8_t *addr,
-    char *out,
-    uint32_t out_len
-) {
-    snprintf(
-        out,
-        out_len,
-        "hny1%02X%02X…%02X%02X",
-        addr[0],
-        addr[1],
-        addr[30],
-        addr[31]
+        whole,
+        fractional
     );
 }

@@ -1,11 +1,19 @@
-#ifndef HONEY_H
-#define HONEY_H
+#pragma once
 
 #include <stdint.h>
 
-#define CLA_HONEY 0xE0
+/*
+ * HONEY Monetary Units
+ *
+ * Base unit: CONE
+ * 1 HONEY (HNY) = 10^18 CONES
+ *
+ * Ledger UI displays HONEY
+ * Ledger signing uses CONES (uint64 / big-int)
+ */
 
-#define INS_GET_VERSION 0x01
-#define INS_PING        0x02
+#define HNY_DECIMALS 18
+#define CONES_PER_HNY 1000000000000000000ULL
 
-#endif
+// Formatting helpers
+void format_hny_amount(uint64_t amount_cones, char *out, uint32_t out_len);
