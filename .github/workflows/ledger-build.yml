@@ -16,12 +16,12 @@ jobs:
 
       - name: Pull Ledger App Builder image
         run: |
-          docker pull ledgerhq/ledger-app-builder:1.16.0
+          docker pull ledgerhq/ledger-app-builder:latest
 
       - name: Build Honey Ledger App (Nano S Plus)
         run: |
           docker run --rm \
             -v "$PWD:/app" \
             -w /app \
-            ledgerhq/ledger-app-builder:1.16.0 \
+            ledgerhq/ledger-app-builder:latest \
             make
